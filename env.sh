@@ -1,0 +1,13 @@
+#!/bin/bash
+
+
+export MXM_PREFIX=albertosoragnamxm
+export MXM_CONTAINER_NAME=mxmaitools-tensorflow-blstm
+export MXM_BASE_CONTAINER=$MXM_PREFIX/$MXM_CONTAINER_NAME
+export MXM_BASE_NAME=$MXM_PREFIX-tensroflow-blstm
+export MXM_VERSION=v0.1.0
+
+ECHO Name:$MXM_CONTAINER_NAME \$MXM_CONTAINER_NAME
+ECHO Container:$MXM_BASE_CONTAINER \$MXM_BASE_CONTAINER
+ECHO Image:$MXM_BASE_NAME \$MXM_BASE_NAME
+ECHO Version:$MXM_VERSION

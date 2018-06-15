@@ -1,4 +1,4 @@
-
+py		
 
 FROM ubuntu:16.04
 MAINTAINER Alberto Soragna alberto dot soragna @gmail.com
@@ -33,6 +33,9 @@ RUN \
     cd rnn-text-classification-tf/ && \
     pip install -r requirements.txt && \
     cd -
+
+COPY \
+    ./script $HOME/script
 
 
 CMD ["bash"]
