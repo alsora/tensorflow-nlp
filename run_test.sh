@@ -6,7 +6,6 @@
 
 [ -z "$MXM_BASE_NAME" ] && { echo "Missing environment. Please run first"; echo "source env.sh"; exit 1; }
 MXM_VERSION=$1
-BACKEND=$2
 
 [ -z "$MXM_VERSION" ] && { echo "Usage: $0 VERSION"; exit 1; }
 
