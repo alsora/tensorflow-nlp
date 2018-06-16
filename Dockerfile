@@ -1,4 +1,3 @@
-py		
 
 FROM ubuntu:16.04
 MAINTAINER Alberto Soragna alberto dot soragna @gmail.com
@@ -36,6 +35,9 @@ RUN \
 
 COPY \
     ./script $HOME/script
+
+COPY \
+    ./tf-helper $HOME/tf-helper
 
 
 CMD ["bash"]

@@ -18,7 +18,7 @@ tf.flags.DEFINE_string("positive_data_file", "./data/rt-polaritydata/rt-polarity
 tf.flags.DEFINE_string("negative_data_file", "./data/rt-polaritydata/rt-polarity.neg", "Data source for the negative data.")
 
 # Network type
-tf.flags.DEFINE_float("model", "blstm_att", "Network model to train: blstm | blstm_att | cnn")
+tf.flags.DEFINE_string("model", "blstm_att", "Network model to train: blstm | blstm_att | cnn")
 
 # Model Hyperparameters
 tf.flags.DEFINE_integer("embedding_dim", 128, "Dimensionality of character embedding (default: 128)")
@@ -91,14 +91,30 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
         with sess.as_default():
 
             if (FLAGS.model == "blstm"):
-                model = NaiveRNN(reversed_dict, document_max_len, num_class, FLAGS)
-            elif (FLAGS.model == "blstm_att"):
-                model = AttentionRNN(reversed_dict, document_max_len, num_class, FLAGS)
-            elif (FLAGS.model == "cnn"):
-                model = TextCNN(
+                model = naive_rnn.NaiveRNN(
+                    vocab_processor=vocab_processor,
                     sequence_length=x_train.shape[1],
                     num_classes=y_train.shape[1],
-                    vocab_size=len(vocab_processor.vocabulary_),
+                    embedding_size=FLAGS.embedding_dim,
+                    num_cells=100,
+                    num_layers=2,
+                    glove_vectors_dir="",
+                    learning_rate=1e-3)
+            elif (FLAGS.model == "blstm_att"):
+                model = attention_rnn.AttentionRNN(
+                    vocab_processor=vocab_processor,
+                    sequence_length=x_train.shape[1],
+                    num_classes=y_train.shape[1],
+                    embedding_size=FLAGS.embedding_dim,
+                    num_cells=100,
+                    num_layers=2,
+                    glove_vectors_dir="",
+                    learning_rate=1e-3)
+            elif (FLAGS.model == "cnn"):
+                model = text_cnn.TextCNN(
+                    vocab_processor = vocab_processor,
+                    sequence_length=x_train.shape[1],
+                    num_classes=y_train.shape[1],
                     embedding_size=FLAGS.embedding_dim,
                     filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
                     num_filters=FLAGS.num_filters,
@@ -159,8 +175,8 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
                   model.dropout_keep_prob: FLAGS.dropout_keep_prob
                 }
 
-                _, step, summaries, loss, accuracy = 
-                    sess.run([model.optimizer, model.global_step, train_summary_op, model.loss, model.accuracy],feed_dict)
+                _, step, summaries, loss, accuracy = sess.run(
+                    [model.optimizer, model.global_step, train_summary_op, model.loss, model.accuracy],feed_dict)
 
                 time_str = datetime.datetime.now().isoformat()
                 print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
@@ -176,8 +192,8 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
                   model.dropout_keep_prob: FLAGS.dropout_keep_prob
                 }
 
-                step, summaries, loss, accuracy = 
-                    sess.run([global_step, dev_summary_op, model.loss, model.accuracy], feed_dict)
+                step, summaries, loss, accuracy = sess.run(
+                    [global_step, dev_summary_op, model.loss, model.accuracy], feed_dict)
                     
                 time_str = datetime.datetime.now().isoformat()
                 print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
@@ -191,7 +207,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
             for batch in batches:
                 x_batch, y_batch = zip(*batch)
                 train_step(x_batch, y_batch)
-                current_step = tf.train.global_step(sess, global_step)
+                current_step = tf.train.global_step(sess, model.global_step)
                 if current_step % FLAGS.evaluate_every == 0:
                     print("\nEvaluation:")
                     dev_step(x_dev, y_dev, writer=dev_summary_writer)
@@ -199,7 +215,6 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
                 if current_step % FLAGS.checkpoint_every == 0:
                     path = saver.save(sess, checkpoint_prefix, global_step=current_step)
                     print("Saved model checkpoint to {}\n".format(path))
-
 
 
 

@@ -8,7 +8,7 @@ export PREFIX=alsora
 export CONTAINER_NAME=tf-text
 export BASE_CONTAINER=$PREFIX/$CONTAINER_NAME
 export BASE_NAME=$PREFIX-tf-text
-export VERSION=v0.1.0
+export VERSION=v0.1.1
 
 echo Name:$CONTAINER_NAME \$CONTAINER_NAME
 echo Container:$BASE_CONTAINER \$BASE_CONTAINER
