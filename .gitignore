@@ -1,4 +1,11 @@
+# Datasets and models except sample
+#!/data/dataset/sample_data/* 
+/data/*
+!/data/dataset
+/data/dataset/*
+!/data/dataset/sample_data
 
+# Mac folder style files
 .DS_Store
 
 # Byte-compiled / optimized / DLL files

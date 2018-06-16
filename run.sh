@@ -16,9 +16,10 @@ echo Base image:$BASE_NAME \$BASE_NAME
 echo Version: $VERSION
 
 
-
 CMD=bash
 
 ## Simple run
-docker run -it --name $BASE_NAME $BASE_CONTAINER:$VERSION $CMD
+#docker run -it --name $BASE_NAME $BASE_CONTAINER:$VERSION $CMD
 
+## Run with volume on data
+docker run --rm -it -v $PWD/data:/root/data --name $BASE_NAME $BASE_CONTAINER:$VERSION $CMD

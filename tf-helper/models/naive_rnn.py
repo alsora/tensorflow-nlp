@@ -41,7 +41,7 @@ class NaiveRNN(object):
         with tf.name_scope("output"):
             self.logits = tf.contrib.slim.fully_connected(self.last_output, num_classes, activation_fn=None)
             '''
-            W = tf.get_variable("W", shape=[num_cells, num_classes], initializer=tf.contrib.layers.xavier_initializer())
+            W = tf.get_variable("W", shape=[num_cells*2, num_classes], initializer=tf.contrib.layers.xavier_initializer())
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
             self.logits = tf.nn.xw_plus_b(self.last_output, W, b, name="logits")
             '''

@@ -24,8 +24,7 @@ class TextCNN(object):
         # Embedding layer
         with tf.device('/cpu:0'), tf.name_scope("embedding"):
             vocab_size = len(vocab_processor.vocabulary_)
-            self.W = 
-                tf.Variable(tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0), name="W")
+            self.W = tf.Variable(tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0), name="W")
             self.embedded_chars = tf.nn.embedding_lookup(self.W, self.input_x)
             self.data_embedding = tf.expand_dims(self.embedded_chars, -1)
 
@@ -83,9 +82,6 @@ class TextCNN(object):
             opt = tf.train.AdamOptimizer(self.learning_rate)
             self.grads_and_vars = opt.compute_gradients(self.loss)
             self.optimizer = opt.apply_gradients(self.grads_and_vars, global_step=self.global_step)
-
-            # This is the same as doing the following: 
-            # self.optimizer = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss, global_step=self.global_step)
 
 
         # Accuracy

@@ -14,16 +14,21 @@ from tensorflow.contrib import learn
 
 # Data loading params
 tf.flags.DEFINE_float("dev_sample_percentage", .1, "Percentage of the training data to use for validation")
-tf.flags.DEFINE_string("positive_data_file", "./data/rt-polaritydata/rt-polarity.pos", "Data source for the positive data.")
-tf.flags.DEFINE_string("negative_data_file", "./data/rt-polaritydata/rt-polarity.neg", "Data source for the negative data.")
+tf.flags.DEFINE_string("data", "../data/dataset/sample_data/train.tsv", "Data source for training and validation set")
+#tf.flags.DEFINE_string("positive_data_file", "./data/rt-polaritydata/rt-polarity.pos", "Data source for the positive data.")
+#tf.flags.DEFINE_string("negative_data_file", "./data/rt-polaritydata/rt-polarity.neg", "Data source for the negative data.")
 
 # Network type
 tf.flags.DEFINE_string("model", "blstm_att", "Network model to train: blstm | blstm_att | cnn")
 
 # Model Hyperparameters
-tf.flags.DEFINE_integer("embedding_dim", 128, "Dimensionality of character embedding (default: 128)")
+tf.flags.DEFINE_integer("embedding_dim", 128, "Dimensionality of character embedding. (for glove, use 50 | 100 | 200 | 300). (default: 128)")
 tf.flags.DEFINE_string("filter_sizes", "3,4,5", "Comma-separated filter sizes (default: '3,4,5')")
 tf.flags.DEFINE_integer("num_filters", 128, "Number of filters per filter size (default: 128)")
+tf.flags.DEFINE_integer("num_cells", 100, "Number of cells in each BLSTM layer (default: 100)")
+tf.flags.DEFINE_integer("num_layers", 2, "Number of BLSTM layers (default: 2)")
+tf.flags.DEFINE_float("learning_rate", 1e-3, "Learning rate for backpropagation (default 1e-3)")
+tf.flags.DEFINE_string("pretrained_embedding_file", "", "Path to a directory containing Glove pretrained vectors")
 tf.flags.DEFINE_float("dropout_keep_prob", 0.5, "Dropout keep probability (default: 0.5)")
 tf.flags.DEFINE_float("l2_reg_lambda", 0.0, "L2 regularization lambda (default: 0.0)")
 
@@ -50,7 +55,7 @@ def preprocess():
 
     # Load data
     print("Loading data...")
-    x_text, y = data_helpers.load_data_and_labels(FLAGS.positive_data_file, FLAGS.negative_data_file)
+    x_text, y = data_helpers.load_data_and_labels(FLAGS.data)
 
     # Build vocabulary
     max_document_length = max([len(x.split(" ")) for x in x_text])
@@ -96,20 +101,20 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
                     sequence_length=x_train.shape[1],
                     num_classes=y_train.shape[1],
                     embedding_size=FLAGS.embedding_dim,
-                    num_cells=100,
-                    num_layers=2,
-                    glove_vectors_dir="",
-                    learning_rate=1e-3)
+                    num_cells=FLAGS.num_cells,
+                    num_layers=FLAGS.num_layers,
+                    glove_vectors_dir=FLAGS.pretrained_embedding_file,
+                    learning_rate=FLAGS.learning_rate)
             elif (FLAGS.model == "blstm_att"):
                 model = attention_rnn.AttentionRNN(
                     vocab_processor=vocab_processor,
                     sequence_length=x_train.shape[1],
                     num_classes=y_train.shape[1],
                     embedding_size=FLAGS.embedding_dim,
-                    num_cells=100,
-                    num_layers=2,
-                    glove_vectors_dir="",
-                    learning_rate=1e-3)
+                    num_cells=FLAGS.num_cells,
+                    num_layers=FLAGS.num_layers,
+                    glove_vectors_dir=FLAGS.pretrained_embedding_file,
+                    learning_rate=FLAGS.learning_rate)
             elif (FLAGS.model == "cnn"):
                 model = text_cnn.TextCNN(
                     vocab_processor = vocab_processor,
@@ -118,6 +123,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
                     embedding_size=FLAGS.embedding_dim,
                     filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
                     num_filters=FLAGS.num_filters,
+                    learning_rate=FLAGS.learning_rate,
                     l2_reg_lambda=FLAGS.l2_reg_lambda)
             else:
                 raise NotImplementedError()
@@ -193,7 +199,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
                 }
 
                 step, summaries, loss, accuracy = sess.run(
-                    [global_step, dev_summary_op, model.loss, model.accuracy], feed_dict)
+                    [model.global_step, dev_summary_op, model.loss, model.accuracy], feed_dict)
                     
                 time_str = datetime.datetime.now().isoformat()
                 print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
