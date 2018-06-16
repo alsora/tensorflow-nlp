@@ -1,9 +1,8 @@
 #!/bin/bash
 #
-# Musixmatch Intelligence SDK Docker Build Script
-# @author Alberto Soragna (alberto dot soragna at musixmatch dot com)
-# @2018 Musixmatch
+# @author Alberto Soragna (alberto dot soragna at gmail dot com)
+# @2018 
     
-echo Building $MXM_BASE_CONTAINER:$MXM_VERSION...
+echo Building $BASE_CONTAINER:$VERSION...
 
-docker build -t $MXM_BASE_CONTAINER:$MXM_VERSION .
+docker build -t $BASE_CONTAINER:$VERSION .

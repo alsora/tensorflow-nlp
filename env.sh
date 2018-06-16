@@ -1,13 +1,16 @@
 #!/bin/bash
+#
+# @author Alberto Soragna (alberto dot soragna at gmail dot com)
+# @2018 
 
 
-export MXM_PREFIX=albertosoragnamxm
-export MXM_CONTAINER_NAME=mxmaitools-tensorflow-blstm
-export MXM_BASE_CONTAINER=$MXM_PREFIX/$MXM_CONTAINER_NAME
-export MXM_BASE_NAME=$MXM_PREFIX-tensroflow-blstm
-export MXM_VERSION=v0.1.0
+export PREFIX=alsora
+export CONTAINER_NAME=tf-text
+export BASE_CONTAINER=$PREFIX/$CONTAINER_NAME
+export BASE_NAME=$PREFIX-tf-text
+export VERSION=v0.1.0
 
-ECHO Name:$MXM_CONTAINER_NAME \$MXM_CONTAINER_NAME
-ECHO Container:$MXM_BASE_CONTAINER \$MXM_BASE_CONTAINER
-ECHO Image:$MXM_BASE_NAME \$MXM_BASE_NAME
-ECHO Version:$MXM_VERSION
+echo Name:$CONTAINER_NAME \$CONTAINER_NAME
+echo Container:$BASE_CONTAINER \$BASE_CONTAINER
+echo Image:$BASE_NAME \$BASE_NAME
+echo Version:$VERSION
