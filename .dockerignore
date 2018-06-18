@@ -1,0 +1,5 @@
+#ignore data directory
+data
+
+#ignore git directory
+.git

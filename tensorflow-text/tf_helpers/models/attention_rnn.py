@@ -6,7 +6,7 @@ from tf_helpers.net_utils import get_init_embedding
 class AttentionRNN(object):
     def __init__(
         self, vocab_processor, sequence_length, num_classes,
-        embedding_size, num_cells, num_layers, glove_vectors_dir, learning_rate = 1e-3):
+        embedding_size, num_cells, num_layers, glove_vectors_dir = None, learning_rate = 1e-3):
 
         self.learning_rate = learning_rate
 
@@ -42,7 +42,7 @@ class AttentionRNN(object):
                 axis=-1)
 
         with tf.name_scope("output"):
-            self.logits = tf.contrib.slim.fully_connected(self.attention_out, num_classes, activation_fn=None)
+            self.logits = tf.contrib.slim.fully_connected(self.attention_out, num_classes, activation_fn=None, name="logits")
             '''
             W = tf.get_variable("W", shape=[num_cells, num_classes], initializer=tf.contrib.layers.xavier_initializer())
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")

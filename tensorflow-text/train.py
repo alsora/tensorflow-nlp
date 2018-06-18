@@ -19,7 +19,10 @@ tf.flags.DEFINE_string("data", "../data/dataset/sample_data/train.tsv", "Data so
 #tf.flags.DEFINE_string("negative_data_file", "./data/rt-polaritydata/rt-polarity.neg", "Data source for the negative data.")
 
 # Network type
-tf.flags.DEFINE_string("model", "blstm_att", "Network model to train: blstm | blstm_att | cnn")
+tf.flags.DEFINE_string("model", "blstm", "Network model to train: blstm | blstm_att | cnn (default: blstm)")
+
+# Model directory
+tf.flags.DEFINE_string("output_dir", "", "Where to save the trained model, checkpoints and stats (default: current_dir/runs/timestamp)")
 
 # Model Hyperparameters
 tf.flags.DEFINE_integer("embedding_dim", 128, "Dimensionality of character embedding. (for glove, use 50 | 100 | 200 | 300). (default: 128)")
@@ -27,8 +30,8 @@ tf.flags.DEFINE_string("filter_sizes", "3,4,5", "Comma-separated filter sizes (d
 tf.flags.DEFINE_integer("num_filters", 128, "Number of filters per filter size (default: 128)")
 tf.flags.DEFINE_integer("num_cells", 100, "Number of cells in each BLSTM layer (default: 100)")
 tf.flags.DEFINE_integer("num_layers", 2, "Number of BLSTM layers (default: 2)")
-tf.flags.DEFINE_float("learning_rate", 1e-3, "Learning rate for backpropagation (default 1e-3)")
-tf.flags.DEFINE_string("pretrained_embedding_file", "", "Path to a directory containing Glove pretrained vectors")
+tf.flags.DEFINE_float("learning_rate", 1e-3, "Learning rate for backpropagation (default: 1e-3)")
+tf.flags.DEFINE_string("pretrained_embedding_file", "", "Path to a directory containing Glove pretrained vectors (default: None)")
 tf.flags.DEFINE_float("dropout_keep_prob", 0.5, "Dropout keep probability (default: 0.5)")
 tf.flags.DEFINE_float("l2_reg_lambda", 0.0, "L2 regularization lambda (default: 0.0)")
 
@@ -140,9 +143,12 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
             grad_summaries_merged = tf.summary.merge(grad_summaries)
             
             # Output directory for models and summaries
-            timestamp = str(int(time.time()))
-            out_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", timestamp))
-            print("Writing to {}\n".format(out_dir))
+
+            if not FLAGS.output_dir:
+                timestamp = str(int(time.time()))
+                FLAGS.output_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", timestamp))
+            
+            print("Writing to {}\n".format(FLAGS.output_dir))
 
             # Summaries for loss and accuracy
             loss_summary = tf.summary.scalar("loss", model.loss)
@@ -150,23 +156,23 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
 
             # Train Summaries
             train_summary_op = tf.summary.merge([loss_summary, acc_summary, grad_summaries_merged])
-            train_summary_dir = os.path.join(out_dir, "summaries", "train")
+            train_summary_dir = os.path.join(FLAGS.output_dir, "summaries", "train")
             train_summary_writer = tf.summary.FileWriter(train_summary_dir, sess.graph)
 
             # Dev summaries
             dev_summary_op = tf.summary.merge([loss_summary, acc_summary])
-            dev_summary_dir = os.path.join(out_dir, "summaries", "dev")
+            dev_summary_dir = os.path.join(FLAGS.output_dir, "summaries", "dev")
             dev_summary_writer = tf.summary.FileWriter(dev_summary_dir, sess.graph)
 
             # Checkpoint directory. Tensorflow assumes this directory already exists so we need to create it
-            checkpoint_dir = os.path.abspath(os.path.join(out_dir, "checkpoints"))
+            checkpoint_dir = os.path.abspath(os.path.join(FLAGS.output_dir, "checkpoints"))
             checkpoint_prefix = os.path.join(checkpoint_dir, "model")
             if not os.path.exists(checkpoint_dir):
                 os.makedirs(checkpoint_dir)
             saver = tf.train.Saver(tf.global_variables(), max_to_keep=FLAGS.num_checkpoints)
 
             # Write vocabulary
-            vocab_processor.save(os.path.join(out_dir, "vocab"))
+            vocab_processor.save(os.path.join(FLAGS.output_dir, "vocab"))
 
             # Initialize all variables
             sess.run(tf.global_variables_initializer())
