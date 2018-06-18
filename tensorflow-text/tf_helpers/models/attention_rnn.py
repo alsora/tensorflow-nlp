@@ -1,19 +1,18 @@
 import tensorflow as tf
 from tensorflow.contrib import rnn
-from models.net_utils import get_init_embedding
+from tf_helpers.net_utils import get_init_embedding
 
 
-class NaiveRNN(object):
+class AttentionRNN(object):
     def __init__(
         self, vocab_processor, sequence_length, num_classes,
         embedding_size, num_cells, num_layers, glove_vectors_dir, learning_rate = 1e-3):
 
-
         self.learning_rate = learning_rate
 
         self.input_x = tf.placeholder(tf.int32, [None, sequence_length], name="input_x")
-        self.x_len = tf.reduce_sum(tf.sign(self.input_x), 1)
         self.input_y = tf.placeholder(tf.float32, [None, num_classes], name="input_y")
+        self.x_len = tf.reduce_sum(tf.sign(self.input_x), 1)
         self.dropout_keep_prob = tf.placeholder(tf.float32, [], name="dropout_keep_prob")
         self.global_step = tf.Variable(0, trainable=False)
 
@@ -25,7 +24,6 @@ class NaiveRNN(object):
                 vocab_size = len(vocab_processor.vocabulary_)
                 init_embeddings = tf.random_uniform([vocab_size, embedding_size])
                 self.embeddings = tf.get_variable("embeddings", initializer=init_embeddings, trainable=True)
-
             self.data_embedding = tf.nn.embedding_lookup(self.embeddings, self.input_x)
 
         with tf.name_scope("birnn"):
@@ -36,14 +34,19 @@ class NaiveRNN(object):
 
             self.rnn_outputs, _, _ = rnn.stack_bidirectional_dynamic_rnn(
                 fw_cells, bw_cells, self.data_embedding, sequence_length=self.x_len, dtype=tf.float32)
-            self.last_output = self.rnn_outputs[:, -1, :]
+
+        with tf.name_scope("attention"):
+            self.attention_score = tf.nn.softmax(tf.contrib.slim.fully_connected(self.rnn_outputs, 1))
+            self.attention_out = tf.squeeze(
+                tf.matmul(tf.transpose(self.rnn_outputs, perm=[0, 2, 1]), self.attention_score),
+                axis=-1)
 
         with tf.name_scope("output"):
-            self.logits = tf.contrib.slim.fully_connected(self.last_output, num_classes, activation_fn=None)
+            self.logits = tf.contrib.slim.fully_connected(self.attention_out, num_classes, activation_fn=None)
             '''
-            W = tf.get_variable("W", shape=[num_cells*2, num_classes], initializer=tf.contrib.layers.xavier_initializer())
+            W = tf.get_variable("W", shape=[num_cells, num_classes], initializer=tf.contrib.layers.xavier_initializer())
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
-            self.logits = tf.nn.xw_plus_b(self.last_output, W, b, name="logits")
+            self.logits = tf.nn.xw_plus_b(self.attention_out, W, b, name="logits")
             '''
             self.predictions = tf.argmax(self.logits, -1, name="predictions")
 
@@ -54,6 +57,7 @@ class NaiveRNN(object):
             opt = tf.train.AdamOptimizer(self.learning_rate)
             self.grads_and_vars = opt.compute_gradients(self.loss)
             self.optimizer = opt.apply_gradients(self.grads_and_vars, global_step=self.global_step)
+
 
         with tf.name_scope("accuracy"):
             correct_predictions = tf.equal(self.predictions, tf.argmax(self.input_y, 1))

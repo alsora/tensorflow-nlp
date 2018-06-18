@@ -19,8 +19,6 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --upgrade pip
     
 
-
-
 #RUN export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}/usr/local/cuda/extras/CUPTI/lib64
 RUN \
     pip install tensorflow && \
@@ -28,14 +26,10 @@ RUN \
 
 
 COPY \
-    ./script $HOME/script
-
-
-COPY \
-    ./tf-helper $HOME/tf-helper
+    ./tensorflow-text $HOME/tensorflow-text
 
 RUN \
-    cd tf-helper/ && \
+    cd tensorflow-text/script/ && \
     pip install -r requirements.txt && \
     cd -
 

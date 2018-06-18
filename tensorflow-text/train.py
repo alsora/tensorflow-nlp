@@ -6,7 +6,7 @@ import os
 import time
 import datetime
 import data_helpers
-from models import *
+from tf_helpers.models import naive_rnn, attention_rnn, text_cnn
 from tensorflow.contrib import learn
 
 # Parameters
