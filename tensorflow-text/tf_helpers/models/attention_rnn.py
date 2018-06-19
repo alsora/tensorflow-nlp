@@ -48,7 +48,7 @@ class AttentionRNN(object):
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
             self.logits = tf.nn.xw_plus_b(self.attention_out, W, b, name="logits")
 
-            self.predictions = tf.argmax(self.logits, -1, name="predictions")
+            self.predictions = tf.argmax(self.logits, -1, output_type=tf.int32, name="predictions")
 
         with tf.name_scope("loss"):
             losses =  tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logits, labels=self.input_y)
@@ -60,5 +60,5 @@ class AttentionRNN(object):
 
 
         with tf.name_scope("accuracy"):
-            correct_predictions = tf.equal(self.predictions, tf.argmax(self.input_y, 1))
+            correct_predictions = tf.equal(self.predictions, tf.argmax(self.input_y, 1, output_type=tf.int32))
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")

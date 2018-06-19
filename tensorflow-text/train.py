@@ -39,8 +39,8 @@ tf.flags.DEFINE_float("l2_reg_lambda", 0.0, "L2 regularization lambda (default: 
 # Training parameters
 tf.flags.DEFINE_integer("batch_size", 64, "Batch Size (default: 64)")
 tf.flags.DEFINE_integer("num_epochs", 10, "Number of training epochs (default: 10)")
-tf.flags.DEFINE_integer("evaluate_every", 100, "Evaluate model on dev set after this many steps (default: 100)")
-tf.flags.DEFINE_integer("checkpoint_every", 100, "Save model after this many steps (default: 100)")
+tf.flags.DEFINE_integer("evaluate_every", 2000, "Evaluate model on dev set after this many steps (default: 2000)")
+tf.flags.DEFINE_integer("checkpoint_every", 2000, "Save model after this many steps (default: 2000)")
 tf.flags.DEFINE_integer("num_checkpoints", 25, "Max number of checkpoints to store (default: 25)")
 # Misc Parameters
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
@@ -86,21 +86,21 @@ def preprocess():
     # Split train/test set
     # TODO: This is very crude, should use cross-validation
     dev_sample_index = -1 * int(FLAGS.dev_sample_percentage * float(len(y)))
-    x_train, x_dev = x_shuffled[:dev_sample_index], x_shuffled[dev_sample_index:]
-    y_train, y_dev = y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
+    x_train, x_valid = x_shuffled[:dev_sample_index], x_shuffled[dev_sample_index:]
+    y_train, y_valid = y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
 
     del x, y, x_shuffled, y_shuffled
 
     print("Vocabulary Size: {:d}".format(len(word_dict)))
-    print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_dev)))
+    print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_valid)))
     
-    return x_train, y_train, word_dict, reversed_dict, x_dev, y_dev
+    return x_train, y_train, word_dict, reversed_dict, x_valid, y_valid
 
 
 
 
 
-def train(x_train, y_train, word_dict, reversed_dict, x_dev, y_dev):
+def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
     # Training
     # ==================================================
 
@@ -183,13 +183,13 @@ def train(x_train, y_train, word_dict, reversed_dict, x_dev, y_dev):
             # Initialize all variables
             sess.run(tf.global_variables_initializer())
 
-            def train_step(x_batch, y_batch):
+            def train_step(x_train_batch, y_train_batch):
                 """
                 A single training step
                 """
                 feed_dict = {
-                  model.input_x: x_batch,
-                  model.input_y: y_batch,
+                  model.input_x: x_train_batch,
+                  model.input_y: y_train_batch,
                   model.dropout_keep_prob: FLAGS.dropout_keep_prob
                 }
 
@@ -200,36 +200,62 @@ def train(x_train, y_train, word_dict, reversed_dict, x_dev, y_dev):
                 print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
                 train_summary_writer.add_summary(summaries, step)
 
-            def dev_step(x_batch, y_batch, writer=None):
-                """
-                Evaluates model on a dev set
-                """
-                feed_dict = {
-                  model.input_x: x_batch,
-                  model.input_y: y_batch,
-                  model.dropout_keep_prob: FLAGS.dropout_keep_prob
-                }
+                return accuracy
 
-                step, summaries, loss, accuracy = sess.run(
-                    [model.global_step, dev_summary_op, model.loss, model.accuracy], feed_dict)
-                    
-                time_str = datetime.datetime.now().isoformat()
-                print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
+
+            def dev_step(x_valid, y_valid, writer=None):
+                """
+                Evaluates model on the full validation set
+                """
+
+                valid_batches = load_utils.batch_iter(list(zip(x_valid, y_valid)), FLAGS.batch_size, 1)
+
+                sum_accuracy, cnt = 0, 0
+                for valid_batch in valid_batches:
+                    x_valid_batch, y_valid_batch = zip(*valid_batch)
+
+                    feed_dict = {
+                        model.input_x: x_valid_batch,
+                        model.input_y: y_valid_batch,
+                        model.dropout_keep_prob: 1.0
+                    }
+
+                    step, summaries, loss, accuracy = sess.run(
+                        [model.global_step, dev_summary_op, model.loss, model.accuracy], feed_dict)
+
+                    sum_accuracy += accuracy
+                    cnt += 1
+
                 if writer:
                     writer.add_summary(summaries, step)
 
+                valid_accuracy = sum_accuracy / cnt
+
+                return valid_accuracy
+
             # Generate batches
-            batches = load_utils.batch_iter(
-                list(zip(x_train, y_train)), FLAGS.batch_size, FLAGS.num_epochs)
+            train_batches = load_utils.batch_iter(list(zip(x_train, y_train)), FLAGS.batch_size, FLAGS.num_epochs)
+            num_batches_per_epoch = (len(x_train) - 1) // FLAGS.batch_size + 1
+
+            max_accuracy = 0
             # Training loop. For each batch...
-            for batch in batches:
-                x_batch, y_batch = zip(*batch)
-                train_step(x_batch, y_batch)
+            for train_batch in train_batches:
+                x_train_batch, y_train_batch = zip(*train_batch)
+                train_step(x_train_batch, y_train_batch)
                 current_step = tf.train.global_step(sess, model.global_step)
                 if current_step % FLAGS.evaluate_every == 0:
                     print("\nEvaluation:")
-                    dev_step(x_dev, y_dev, writer=dev_summary_writer)
-                    print("")
+                    valid_accuracy = dev_step(x_valid, y_valid, writer=None)
+
+                    time_str = datetime.datetime.now().isoformat()
+                    print("{}: step {}, valid_accuracy {:g}".format(time_str, current_step, valid_accuracy))
+                
+                    if valid_accuracy > max_accuracy:
+                        max_accuracy = valid_accuracy
+                        path = saver.save(sess, checkpoint_prefix, global_step=current_step)
+                        print("Saved model with better accuracy to {}\n".format(path))
+                        continue
+
                 if current_step % FLAGS.checkpoint_every == 0:
                     path = saver.save(sess, checkpoint_prefix, global_step=current_step)
                     print("Saved model checkpoint to {}\n".format(path))
@@ -237,9 +263,10 @@ def train(x_train, y_train, word_dict, reversed_dict, x_dev, y_dev):
 
 
 
+
 def main(argv=None):
-    x_train, y_train, word_dict, reversed_dict, x_dev, y_dev = preprocess()
-    train(x_train, y_train, word_dict, reversed_dict, x_dev, y_dev)
+    x_train, y_train, word_dict, reversed_dict, x_valid, y_valid = preprocess()
+    train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid)
 
 if __name__ == '__main__':
     tf.app.run()
