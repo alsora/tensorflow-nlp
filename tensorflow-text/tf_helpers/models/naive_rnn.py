@@ -12,7 +12,7 @@ class NaiveRNN(object):
 
         self.input_x = tf.placeholder(tf.int32, [None, sequence_length], name="input_x")
         self.x_len = tf.reduce_sum(tf.sign(self.input_x), 1)
-        self.input_y = tf.placeholder(tf.float32, [None, num_classes], name="input_y")
+        self.input_y = tf.placeholder(tf.int32, [None, num_classes], name="input_y")
         self.dropout_keep_prob = tf.placeholder(tf.float32, [], name="dropout_keep_prob")
         self.global_step = tf.Variable(0, trainable=False)
 
@@ -47,7 +47,7 @@ class NaiveRNN(object):
             self.predictions = tf.argmax(self.logits, -1, name="predictions")
 
         with tf.name_scope("loss"):
-            losses =  tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.input_y)
+            losses =  tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logits, labels=self.input_y)
             self.loss = tf.reduce_mean(losses)
 
             opt = tf.train.AdamOptimizer(self.learning_rate)

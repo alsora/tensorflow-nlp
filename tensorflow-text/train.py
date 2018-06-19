@@ -26,14 +26,14 @@ tf.flags.DEFINE_string("model", "blstm", "Network model to train: blstm | blstm_
 tf.flags.DEFINE_string("output_dir", "", "Where to save the trained model, checkpoints and stats (default: current_dir/runs/timestamp)")
 
 # Model Hyperparameters
-tf.flags.DEFINE_integer("embedding_dim", 128, "Dimensionality of character embedding. (for glove, use 50 | 100 | 200 | 300). (default: 128)")
+tf.flags.DEFINE_integer("embedding_dim", 300, "Dimensionality of character embedding. (for glove: use 50 | 100 | 200 | 300, for cnn: use 128). (default: 300)")
 tf.flags.DEFINE_string("filter_sizes", "3,4,5", "Comma-separated filter sizes (default: '3,4,5')")
 tf.flags.DEFINE_integer("num_filters", 128, "Number of filters per filter size (default: 128)")
 tf.flags.DEFINE_integer("num_cells", 100, "Number of cells in each BLSTM layer (default: 100)")
 tf.flags.DEFINE_integer("num_layers", 2, "Number of BLSTM layers (default: 2)")
 tf.flags.DEFINE_float("learning_rate", 1e-3, "Learning rate for backpropagation (default: 1e-3)")
 tf.flags.DEFINE_string("pretrained_embedding_file", "", "Path to a directory containing Glove pretrained vectors (default: None)")
-tf.flags.DEFINE_float("dropout_keep_prob", 0.5, "Dropout keep probability (default: 0.5)")
+tf.flags.DEFINE_float("dropout_keep_prob", 0.75, "Dropout keep probability (default: 0.75)")
 tf.flags.DEFINE_float("l2_reg_lambda", 0.0, "L2 regularization lambda (default: 0.0)")
 
 # Training parameters
