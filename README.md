@@ -58,6 +58,8 @@ It's possible to see all the available flags using
   - Characters LSTM [repo](https://github.com/charlesashby/CharLSTM).
   - C-LSTM [paper](https://arxiv.org/pdf/1511.08630.pdf).
   - Adversarial Classification [repo](https://github.com/dennybritz/models/tree/master/adversarial_text).
+  - Word2vec enhanced with LSTM [repo](https://github.com/chaitjo/lstm-context-embeddings
+).
 
 
 

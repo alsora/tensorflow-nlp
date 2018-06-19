@@ -5,7 +5,8 @@ import numpy as np
 import os
 import time
 import datetime
-import data_helpers
+import data_helpers.load as load_utils
+import data_helpers.vocab as vocab_utils
 from tf_helpers.models import naive_rnn, attention_rnn, text_cnn
 from tensorflow.contrib import learn
 
@@ -52,18 +53,29 @@ FLAGS = tf.flags.FLAGS
 #     print("{}={}".format(attr.upper(), value))
 # print("")
 
+if not FLAGS.output_dir:
+    timestamp = str(int(time.time()))
+    FLAGS.output_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", timestamp))
+
+if not os.path.exists(FLAGS.output_dir):
+    os.makedirs(FLAGS.output_dir)
+
+
 def preprocess():
     # Data Preparation
     # ==================================================
 
     # Load data
     print("Loading data...")
-    x_text, y = data_helpers.load_data_and_labels(FLAGS.data)
+    x_text, y = load_utils.load_data_and_labels(FLAGS.data)
 
     # Build vocabulary
-    max_document_length = max([len(x.split(" ")) for x in x_text])
-    vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length)
-    x = np.array(list(vocab_processor.fit_transform(x_text)))
+    max_element_length = max([len(x.split(" ")) for x in x_text])
+
+    word_dict, reversed_dict = load_utils.build_dict(x_text, os.path.join(FLAGS.output_dir, "vocab") )
+    
+    x = load_utils.transform_text(x_text, word_dict, max_element_length)
+    x = np.array(x)
 
     # Randomly shuffle data
     np.random.seed(10)
@@ -79,15 +91,16 @@ def preprocess():
 
     del x, y, x_shuffled, y_shuffled
 
-    print("Vocabulary Size: {:d}".format(len(vocab_processor.vocabulary_)))
+    print("Vocabulary Size: {:d}".format(len(word_dict)))
     print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_dev)))
-    return x_train, y_train, vocab_processor, x_dev, y_dev
+    
+    return x_train, y_train, word_dict, reversed_dict, x_dev, y_dev
 
 
 
 
 
-def train(x_train, y_train, vocab_processor, x_dev, y_dev):
+def train(x_train, y_train, word_dict, reversed_dict, x_dev, y_dev):
     # Training
     # ==================================================
 
@@ -100,7 +113,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
 
             if (FLAGS.model == "blstm"):
                 model = naive_rnn.NaiveRNN(
-                    vocab_processor=vocab_processor,
+                    reversed_dict=reversed_dict,
                     sequence_length=x_train.shape[1],
                     num_classes=y_train.shape[1],
                     embedding_size=FLAGS.embedding_dim,
@@ -110,7 +123,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
                     learning_rate=FLAGS.learning_rate)
             elif (FLAGS.model == "blstm_att"):
                 model = attention_rnn.AttentionRNN(
-                    vocab_processor=vocab_processor,
+                    reversed_dict=reversed_dict,
                     sequence_length=x_train.shape[1],
                     num_classes=y_train.shape[1],
                     embedding_size=FLAGS.embedding_dim,
@@ -120,7 +133,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
                     learning_rate=FLAGS.learning_rate)
             elif (FLAGS.model == "cnn"):
                 model = text_cnn.TextCNN(
-                    vocab_processor = vocab_processor,
+                    reversed_dict = reversed_dict,
                     sequence_length=x_train.shape[1],
                     num_classes=y_train.shape[1],
                     embedding_size=FLAGS.embedding_dim,
@@ -144,10 +157,6 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
             
             # Output directory for models and summaries
 
-            if not FLAGS.output_dir:
-                timestamp = str(int(time.time()))
-                FLAGS.output_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", timestamp))
-            
             print("Writing to {}\n".format(FLAGS.output_dir))
 
             # Summaries for loss and accuracy
@@ -170,9 +179,6 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
             if not os.path.exists(checkpoint_dir):
                 os.makedirs(checkpoint_dir)
             saver = tf.train.Saver(tf.global_variables(), max_to_keep=FLAGS.num_checkpoints)
-
-            # Write vocabulary
-            vocab_processor.save(os.path.join(FLAGS.output_dir, "vocab"))
 
             # Initialize all variables
             sess.run(tf.global_variables_initializer())
@@ -213,7 +219,7 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
                     writer.add_summary(summaries, step)
 
             # Generate batches
-            batches = data_helpers.batch_iter(
+            batches = load_utils.batch_iter(
                 list(zip(x_train, y_train)), FLAGS.batch_size, FLAGS.num_epochs)
             # Training loop. For each batch...
             for batch in batches:
@@ -232,8 +238,8 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
 
 
 def main(argv=None):
-    x_train, y_train, vocab_processor, x_dev, y_dev = preprocess()
-    train(x_train, y_train, vocab_processor, x_dev, y_dev)
+    x_train, y_train, word_dict, reversed_dict, x_dev, y_dev = preprocess()
+    train(x_train, y_train, word_dict, reversed_dict, x_dev, y_dev)
 
 if __name__ == '__main__':
     tf.app.run()

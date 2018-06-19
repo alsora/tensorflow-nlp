@@ -8,7 +8,7 @@ class TextCNN(object):
     Uses an embedding layer, followed by a convolutional, max-pooling and softmax layer.
     """
     def __init__(
-      self, vocab_processor, sequence_length, num_classes,
+      self, reversed_dict, sequence_length, num_classes,
       embedding_size, filter_sizes, num_filters, learning_rate = 1e-3, l2_reg_lambda=0.0):
 
         # Placeholders for input, output and dropout
@@ -23,7 +23,7 @@ class TextCNN(object):
 
         # Embedding layer
         with tf.device('/cpu:0'), tf.name_scope("embedding"):
-            vocab_size = len(vocab_processor.vocabulary_)
+            vocab_size = len(reversed_dict)
             self.W = tf.Variable(tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0), name="W")
             self.embedded_chars = tf.nn.embedding_lookup(self.W, self.input_x)
             self.data_embedding = tf.expand_dims(self.embedded_chars, -1)

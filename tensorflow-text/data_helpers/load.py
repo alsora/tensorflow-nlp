@@ -1,8 +1,7 @@
 import numpy as np
 import re
 import itertools
-from collections import Counter
-
+import collections
 
 def clean_str(string):
     """
@@ -86,3 +85,42 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
             start_index = batch_num * batch_size
             end_index = min((batch_num + 1) * batch_size, data_size)
             yield shuffled_data[start_index:end_index]
+
+
+
+
+def build_dict(sentences, output_file):
+
+    words = list()
+    for sentence in sentences:
+        for word in sentence.split(" "):
+            words.append(word)
+
+    word_counter = collections.Counter(words).most_common()
+    word_dict = dict()
+    word_dict["<padding>"] = 0
+    word_dict["<unk>"] = 1
+    for word, _ in word_counter:
+        word_dict[word] = len(word_dict)
+
+
+    # Save vocabulary to file
+    print("Saving vocabulary to file: " + output_file)
+    with open(output_file, "w") as f:
+        f.write("\n".join(token for token in word_dict))
+    print("- done.")
+
+
+    reversed_dict = dict(zip(word_dict.values(), word_dict.keys()))
+
+    return word_dict, reversed_dict
+
+
+
+def transform_text(data, word_dict, max_element_length, padding="<padding>"):
+
+    x = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict["<unk>"]), d)), data))
+    x = list(map(lambda d: d[:max_element_length], x))
+    x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[padding]], x))
+
+    return x
