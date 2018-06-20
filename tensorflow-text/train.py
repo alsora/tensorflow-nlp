@@ -15,9 +15,7 @@ from tensorflow.contrib import learn
 
 # Data loading params
 tf.flags.DEFINE_float("dev_sample_percentage", .1, "Percentage of the training data to use for validation")
-tf.flags.DEFINE_string("data", "../data/dataset/sample_data/train.tsv", "Data source for training and validation set")
-#tf.flags.DEFINE_string("positive_data_file", "./data/rt-polaritydata/rt-polarity.pos", "Data source for the positive data.")
-#tf.flags.DEFINE_string("negative_data_file", "./data/rt-polaritydata/rt-polarity.neg", "Data source for the negative data.")
+tf.flags.DEFINE_string("data", "../data/dataset/sample_data/train.tsv", "Data source tab separated files. It's possible to provide more than 1 file using a comma")
 
 # Network type
 tf.flags.DEFINE_string("model", "blstm", "Network model to train: blstm | blstm_att | cnn (default: blstm)")
@@ -68,16 +66,19 @@ def preprocess():
 
     # Load data
     print("Loading data...")
-    x_text, y = load_utils.load_data_and_labels(FLAGS.data)
+    files_list = FLAGS.data.split(",")
+    x_text, y = load_utils.load_data_and_labels(files_list)
 
     # Build vocabulary
     max_element_length = max([len(x.split(" ")) for x in x_text])
 
-    word_dict, reversed_dict = load_utils.build_dict(x_text, os.path.join(FLAGS.output_dir, "vocab") )
+    word_dict, reversed_dict = load_utils.build_dict(x_text, FLAGS.output_dir)
     
     x = load_utils.transform_text(x_text, word_dict, max_element_length)
+    
     x = np.array(x)
-
+    y = np.array(y)
+    
     # Randomly shuffle data
     np.random.seed(10)
     shuffle_indices = np.random.permutation(np.arange(len(y)))
@@ -91,6 +92,8 @@ def preprocess():
     y_train, y_valid = y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
 
     del x, y, x_shuffled, y_shuffled
+
+    #x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=FLAGS.dev_sample_percentage)
 
     print("Vocabulary Size: {:d}".format(len(word_dict)))
     print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_valid)))

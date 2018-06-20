@@ -5,6 +5,14 @@ from tensorflow.python.framework import graph_util
 import numpy as np
 import os
 import time
+import argparse
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--model_dir', default=1, help="Path to the folder containing the network model",
+                    type=int)
+parser.add_argument('--output_node_names', default='output/predictions', help="Comma separated list of output node names")
+
 
 
 def frozen_graph_from_checkpoint(model_dir, output_node_names = ''):
@@ -14,14 +22,14 @@ def frozen_graph_from_checkpoint(model_dir, output_node_names = ''):
     input_checkpoint = checkpoint.model_checkpoint_path
 
     # We precise the file fullname of our freezed graph
-    absolute_model_folder = "/".join(input_checkpoint.split('/')[:-1])
-    output_graph = absolute_model_folder + "/frozen_model.pb"
+    checkpoint_path = model_dir + "/" + input_checkpoint.split('/')[-1]
+    output_graph = model_dir + "/frozen_model.pb"
 
     # We clear devices to allow TensorFlow to control on which device it will load operations
     clear_devices = True
 
    # We import the meta graph and retrieve a Saver
-    saver = tf.train.import_meta_graph(input_checkpoint + '.meta', clear_devices=clear_devices)
+    saver = tf.train.import_meta_graph(checkpoint_path + '.meta', clear_devices=clear_devices)
 
     # We retrieve the protobuf graph definition
     graph = tf.get_default_graph()
@@ -34,7 +42,7 @@ def frozen_graph_from_checkpoint(model_dir, output_node_names = ''):
 
     # We start a session and restore the graph weights
     with tf.Session() as sess:
-        saver.restore(sess, input_checkpoint)
+        saver.restore(sess, checkpoint_path)
 
         output_graph_def = graph_util.convert_variables_to_constants(
             sess, # The session is used to retrieve the weights
@@ -47,3 +55,10 @@ def frozen_graph_from_checkpoint(model_dir, output_node_names = ''):
         output_graph_file.write(output_graph_def.SerializeToString())
 
     print("%d ops in the final graph." % len(output_graph_def.node))
+
+
+
+if __name__ == '__main__':
+    args = parser.parse_args()
+
+    frozen_graph_from_checkpoint(args.model_dir, args.output_node_names)

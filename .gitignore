@@ -4,6 +4,9 @@
 !/data/dataset
 /data/dataset/*
 !/data/dataset/sample_data
+!/data/embedding
+/data/embedding/*
+!/data/embedding/download_glove.py
 
 # Mac folder style files
 .DS_Store

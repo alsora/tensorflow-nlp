@@ -15,8 +15,9 @@ class TextCNN(object):
         self.input_x = tf.placeholder(tf.int32, [None, sequence_length], name="input_x")
         self.input_y = tf.placeholder(tf.int32, [None, num_classes], name="input_y")
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
-        self.global_step = tf.Variable(0, name="global_step", trainable=False)
         self.learning_rate = learning_rate
+        self.global_step = tf.Variable(0, name="global_step", trainable=False)
+
 
         # Keeping track of l2 regularization loss (optional)
         l2_loss = tf.constant(0.0)

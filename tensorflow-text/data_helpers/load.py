@@ -3,6 +3,12 @@ import re
 import itertools
 import json
 import collections
+import os
+
+
+PADDING_ = "<padding>"
+UNK_ = "<unk>"
+
 
 def clean_str(string):
     """
@@ -22,6 +28,7 @@ def clean_str(string):
     string = re.sub(r"\)", " \) ", string)
     string = re.sub(r"\?", " \? ", string)
     string = re.sub(r"\s{2,}", " ", string)
+    string = re.sub(r"@[A-Za-z0-9]+", " ", string)  #For Twitter use: remove hashtags
     return string.strip().lower()
 
 
@@ -36,19 +43,15 @@ def adapt_unique_file(single_data_file):
     return positive_examples, negative_examples
 
 
-def combine_data_files(data_files : list):
+def combine_data_files(data_files):
     lines = []
     for d in data_files:
         with open(d) as fin: lines.extend(fin.readlines())
 
     return lines
 
-def load_data_and_labels(data_files : list):
-    """
-    Loads data from files,with two different file formattation, both with unique or divided files
-    It splits the data into words and generates labels.
-    Returns split sentences and labels.
-    """
+def load_data_and_labels(data_files, output_dir = None):
+
     # Load data from files
     if len(data_files) > 1:
         examples = combine_data_files(data_files=data_files)
@@ -60,9 +63,9 @@ def load_data_and_labels(data_files : list):
     # Save label of every example
     labels = []
     x_text = []
-    for t in examples:
-        t = t.strip()
-        split = t.split('\t',1)
+    for line in examples:
+        line = line.strip()
+        split = line.split('\t',1)
         labels.append(split[0])
         x_text.append(split[1])
 
@@ -73,24 +76,23 @@ def load_data_and_labels(data_files : list):
     num_labels = len(distinct_labels)
 
     dict_labels = {}
-
-    for i,el in enumerate(distinct_labels):
-        dict_labels[el] = i
+    for i,label in enumerate(distinct_labels):
+        dict_labels[label] = i
 
     y = []
-
-    for l in labels:
-        one_hot_vect = np.zeros(num_labels,dtype=int).tolist()
-        one_hot_vect[dict_labels[l]] = 1
+    for label in labels:
+        one_hot_vect = [0] * num_labels
+        one_hot_vect[dict_labels[label]] = 1
         y.append(one_hot_vect)
-
 
     x_text = [clean_str(sent) for sent in x_text]
 
-    with open('../dict_labels.json', 'w') as fp:
-        json.dump(dict_labels, fp)
+    if output_dir:
+        output_file = os.path.join(output_dir, "vocab_labels")
+        with open(output_file, 'w') as fp:
+            json.dump(dict_labels, fp)
 
-    return [x_text, y]
+    return x_text, y
 
 
 
@@ -116,7 +118,7 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
 
 
 
-def build_dict(sentences, output_file):
+def build_dict(sentences, output_dir = None):
 
     words = list()
     for sentence in sentences:
@@ -125,18 +127,17 @@ def build_dict(sentences, output_file):
 
     word_counter = collections.Counter(words).most_common()
     word_dict = dict()
-    word_dict["<padding>"] = 0
-    word_dict["<unk>"] = 1
+    word_dict[PADDING_] = 0
+    word_dict[UNK_] = 1
     for word, _ in word_counter:
         word_dict[word] = len(word_dict)
 
-
     # Save vocabulary to file
-    print("Saving vocabulary to file: " + output_file)
-    with open(output_file, "w") as f:
-        f.write("\n".join(token for token in word_dict))
-    print("- done.")
-
+    if output_dir:
+        output_file = os.path.join(output_dir, "vocab_words")
+        print("Saving vocabulary to file: " + output_file)
+        with open(output_file, "w") as f:
+            f.write("\n".join(token for token in word_dict))
 
     reversed_dict = dict(zip(word_dict.values(), word_dict.keys()))
 
@@ -144,14 +145,10 @@ def build_dict(sentences, output_file):
 
 
 
-def transform_text(data, word_dict, max_element_length, padding="<padding>"):
+def transform_text(data, word_dict, max_element_length):
 
-    x = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict["<unk>"]), d)), data))
+    x = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict[UNK_]), d)), data))
     x = list(map(lambda d: d[:max_element_length], x))
-    x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[padding]], x))
+    x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[PADDING_]], x))
 
     return x
-
-
-if __name__ == "__main__":
-    load_data_and_labels(["/home/mxm/tensorflow-text/example1.csv","/home/mxm/tensorflow-text/example2.csv"])

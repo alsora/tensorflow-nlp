@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.contrib import rnn
-from tf_helpers.net_utils import get_init_embedding
+from tf_helpers.net_utils import get_glove_embedding, get_fasttext_embedding
 
 
 class NaiveRNN(object):
@@ -8,19 +8,19 @@ class NaiveRNN(object):
         self, reversed_dict, sequence_length, num_classes,
         embedding_size, num_cells, num_layers, glove_embedding = None, fasttext_embedding = None, learning_rate = 1e-3):
 
-        self.learning_rate = learning_rate
-
+        # Placeholders for input, output and dropout
         self.input_x = tf.placeholder(tf.int32, [None, sequence_length], name="input_x")
         self.input_y = tf.placeholder(tf.int32, [None, num_classes], name="input_y")
         self.x_len = tf.reduce_sum(tf.sign(self.input_x), 1)
         self.dropout_keep_prob = tf.placeholder(tf.float32, [], name="dropout_keep_prob")
-        self.global_step = tf.Variable(0, trainable=False)
+        self.global_step = tf.Variable(0, name="global_step", trainable=False)
+        self.learning_rate = learning_rate
 
         with tf.name_scope("embedding"):
             if glove_embedding:
                 init_embeddings = tf.constant(get_glove_embedding(reversed_dict, glove_embedding), dtype=tf.float32)
                 self.embeddings = tf.get_variable("embeddings", initializer=init_embeddings, trainable=False)
-            else if fasttext_embedding:
+            elif fasttext_embedding:
                 init_embeddings = tf.constant(get_fasttext_embedding(reversed_dict, fasttext_embedding), dtype=tf.float32)
                 self.embeddings = tf.get_variable("embeddings", initializer=init_embeddings, trainable=False)
             else:

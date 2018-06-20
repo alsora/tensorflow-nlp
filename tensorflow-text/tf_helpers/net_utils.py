@@ -22,10 +22,12 @@ def get_glove_embedding(reversed_dict, glove_file):
 
         word_vec_list.append(word_vec)
 
+    print ("Done!")
     return np.array(word_vec_list)
 
 
 def get_fasttext_embedding(reversed_dict, fasttext_file):
+    print("Loading Fasttext vectors...")
     model = FastText.load_fasttext_format(fasttext_file)
 
     embedding_size = model.vector_size
@@ -39,4 +41,5 @@ def get_fasttext_embedding(reversed_dict, fasttext_file):
 
         word_vec_list.append(word_vec)
 
+    print ("Done!")
     return np.array(word_vec_list)
