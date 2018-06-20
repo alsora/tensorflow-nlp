@@ -26,7 +26,7 @@ RUN \
 
 
 COPY \
-    ./tensorflow-text $HOME/tensorflow-text
+    ./python $HOME/tensorflow-text
 
 RUN \
     cd tensorflow-text/script/ && \

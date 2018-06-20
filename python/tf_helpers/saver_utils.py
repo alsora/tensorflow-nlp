@@ -66,8 +66,8 @@ def save_model(session, output_file):
     builder.add_meta_graph_and_variables(
         session,
         [tf.saved_model.tag_constants.SERVING],
-        clear_devices=True
-        )
+        clear_devices=True)
+    
 
     builder.save()
 
@@ -77,4 +77,4 @@ def save_model(session, output_file):
 if __name__ == '__main__':
     args = parser.parse_args()
 
-    frozen_graph_from_checkpoint(args.model_dir, args.output_node_names)
+    freeze_graph(args.model_dir, args.output_node_names)

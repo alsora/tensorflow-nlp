@@ -55,7 +55,7 @@ FLAGS = tf.flags.FLAGS
 
 if not FLAGS.output_dir:
     timestamp = str(int(time.time()))
-    FLAGS.output_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", timestamp))
+    FLAGS.output_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", FLAGS.model + timestamp))
 
 if not os.path.exists(FLAGS.output_dir):
     os.makedirs(FLAGS.output_dir)
@@ -190,6 +190,10 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
             # Initialize all variables
             sess.run(tf.global_variables_initializer())
 
+            # Generate batches
+            train_batches = load_utils.batch_iter(list(zip(x_train, y_train)), FLAGS.batch_size, FLAGS.num_epochs)
+            num_batches_per_epoch = (len(x_train) - 1) // FLAGS.batch_size + 1
+
             def train_step(x_train_batch, y_train_batch):
                 """
                 A single training step
@@ -203,8 +207,11 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
                 _, step, summaries, loss, accuracy = sess.run(
                     [model.optimizer, model.global_step, train_summary_op, model.loss, model.accuracy],feed_dict)
 
+                epoch = ( step // num_batches_per_epoch) + 1
+                relative_step = step % num_batches_per_epoch
                 time_str = datetime.datetime.now().isoformat()
-                print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
+                print("{}: epoch {}/{}, step {}/{}, loss {:g}, acc {:g}".format(time_str, epoch, FLAGS.num_epochs, relative_step, num_batches_per_epoch, loss, accuracy))
+
                 train_summary_writer.add_summary(summaries, step)
 
                 return accuracy
@@ -240,9 +247,6 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
 
                 return valid_accuracy
 
-            # Generate batches
-            train_batches = load_utils.batch_iter(list(zip(x_train, y_train)), FLAGS.batch_size, FLAGS.num_epochs)
-            num_batches_per_epoch = (len(x_train) - 1) // FLAGS.batch_size + 1
 
             max_accuracy = 0
             # Training loop. For each batch...
@@ -268,7 +272,7 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
                     print("Saved model checkpoint to {}\n".format(path))
                                 
             path = saver.save(sess, checkpoint_prefix, global_step=current_step + 1)
-            saver_utils.save_model(sess, FLAGS.output_dir)
+            saver_utils.save_model(sess, os.path.join(FLAGS.output_dir, "saved"))
 
 
 
