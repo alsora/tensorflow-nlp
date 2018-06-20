@@ -6,7 +6,7 @@ from tf_helpers.net_utils import get_init_embedding
 class AttentionRNN(object):
     def __init__(
         self, reversed_dict, sequence_length, num_classes,
-        embedding_size, num_cells, num_layers, glove_vectors_dir = None, learning_rate = 1e-3):
+        embedding_size, num_cells, num_layers, glove_embedding = None, fasttext_embedding = None, learning_rate = 1e-3):
 
         self.learning_rate = learning_rate
 
@@ -17,13 +17,17 @@ class AttentionRNN(object):
         self.global_step = tf.Variable(0, trainable=False)
 
         with tf.name_scope("embedding"):
-            if glove_vectors_dir:
-                init_embeddings = tf.constant(get_init_embedding(reversed_dict, embedding_size, glove_vectors), dtype=tf.float32)
+            if glove_embedding:
+                init_embeddings = tf.constant(get_glove_embedding(reversed_dict, glove_embedding), dtype=tf.float32)
+                self.embeddings = tf.get_variable("embeddings", initializer=init_embeddings, trainable=False)
+            else if fasttext_embedding:
+                init_embeddings = tf.constant(get_fasttext_embedding(reversed_dict, fasttext_embedding), dtype=tf.float32)
                 self.embeddings = tf.get_variable("embeddings", initializer=init_embeddings, trainable=False)
             else:
                 vocab_size = len(reversed_dict)
                 init_embeddings = tf.random_uniform([vocab_size, embedding_size])
                 self.embeddings = tf.get_variable("embeddings", initializer=init_embeddings, trainable=True)
+
             self.data_embedding = tf.nn.embedding_lookup(self.embeddings, self.input_x)
 
         with tf.name_scope("birnn"):
@@ -42,7 +46,7 @@ class AttentionRNN(object):
                 axis=-1)
 
         with tf.name_scope("output"):
-            #self.logits = tf.contrib.slim.fully_connected(self.attention_out, num_classes, activation_fn=None, name="logits")
+            #self.logits = tf.contrib.slim.fully_connected(self.attention_out, num_classes, activation_fn=None)
 
             W = tf.get_variable("W", shape=[self.last_output.shape[1], num_classes], initializer=tf.contrib.layers.xavier_initializer())
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
