@@ -1,6 +1,7 @@
 import numpy as np
 import re
 import itertools
+import json
 import collections
 
 def clean_str(string):
@@ -35,32 +36,59 @@ def adapt_unique_file(single_data_file):
     return positive_examples, negative_examples
 
 
+def combine_data_files(data_files : list):
+    lines = []
+    for d in data_files:
+        with open(d) as fin: lines.extend(fin.readlines())
 
+    return lines
 
-def load_data_and_labels(positive_data_file, negative_data_file=None):
+def load_data_and_labels(data_files : list):
     """
     Loads data from files,with two different file formattation, both with unique or divided files
     It splits the data into words and generates labels.
     Returns split sentences and labels.
     """
     # Load data from files
-
-
-    if negative_data_file:
-        positive_examples = list(open(positive_data_file, "r").readlines())
-        positive_examples = [s.strip() for s in positive_examples]
-        negative_examples = list(open(negative_data_file, "r").readlines())
-        negative_examples = [s.strip() for s in negative_examples]
+    if len(data_files) > 1:
+        examples = combine_data_files(data_files=data_files)
+    elif len(data_files) == 1:
+        examples = list(open(data_files[0], "r").readlines())
     else:
-        positive_examples, negative_examples = adapt_unique_file(positive_data_file)
+        examples = []
 
-    # Split by words
-    x_text = positive_examples + negative_examples
+    # Save label of every example
+    labels = []
+    x_text = []
+    for t in examples:
+        t = t.strip()
+        split = t.split('\t',1)
+        labels.append(split[0])
+        x_text.append(split[1])
+
+    assert len(x_text) == len(labels)
+
+    # count distinct labels
+    distinct_labels = set(labels)
+    num_labels = len(distinct_labels)
+
+    dict_labels = {}
+
+    for i,el in enumerate(distinct_labels):
+        dict_labels[el] = i
+
+    y = []
+
+    for l in labels:
+        one_hot_vect = np.zeros(num_labels,dtype=int).tolist()
+        one_hot_vect[dict_labels[l]] = 1
+        y.append(one_hot_vect)
+
+
     x_text = [clean_str(sent) for sent in x_text]
-    # Generate labels
-    positive_labels = [[0, 1] for _ in positive_examples]
-    negative_labels = [[1, 0] for _ in negative_examples]
-    y = np.concatenate([positive_labels, negative_labels], 0)
+
+    with open('../dict_labels.json', 'w') as fp:
+        json.dump(dict_labels, fp)
 
     return [x_text, y]
 
@@ -123,3 +151,7 @@ def transform_text(data, word_dict, max_element_length, padding="<padding>"):
     x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[padding]], x))
 
     return x
+
+
+if __name__ == "__main__":
+    load_data_and_labels(["/home/mxm/tensorflow-text/example1.csv","/home/mxm/tensorflow-text/example2.csv"])
