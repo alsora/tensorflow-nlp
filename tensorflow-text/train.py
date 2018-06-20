@@ -8,6 +8,7 @@ import datetime
 import data_helpers.load as load_utils
 import data_helpers.vocab as vocab_utils
 from tf_helpers.models import naive_rnn, attention_rnn, text_cnn
+from tf_helpers import saver_utils
 from tensorflow.contrib import learn
 
 # Parameters
@@ -24,7 +25,7 @@ tf.flags.DEFINE_string("model", "blstm", "Network model to train: blstm | blstm_
 tf.flags.DEFINE_string("output_dir", "", "Where to save the trained model, checkpoints and stats (default: current_dir/runs/timestamp)")
 
 # Model Hyperparameters
-tf.flags.DEFINE_integer("embedding_dim", 300, "Dimensionality of character embedding. (for cnn: use 128). (default: 300)")
+tf.flags.DEFINE_integer("embedding_dim", 300, "Dimensionality of character embedding. For cnn: use 128. Not used if loading a pretrained embedding. (default: 300)")
 tf.flags.DEFINE_string("filter_sizes", "3,4,5", "Comma-separated filter sizes (default: '3,4,5')")
 tf.flags.DEFINE_integer("num_filters", 128, "Number of filters per filter size (default: 128)")
 tf.flags.DEFINE_integer("num_cells", 100, "Number of cells in each BLSTM layer (default: 100)")
@@ -265,6 +266,9 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
                 if current_step % FLAGS.checkpoint_every == 0:
                     path = saver.save(sess, checkpoint_prefix, global_step=current_step)
                     print("Saved model checkpoint to {}\n".format(path))
+                                
+            path = saver.save(sess, checkpoint_prefix, global_step=current_step + 1)
+            saver_utils.save_model(sess, FLAGS.output_dir)
 
 
 

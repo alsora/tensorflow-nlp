@@ -15,7 +15,7 @@ parser.add_argument('--output_node_names', default='output/predictions', help="C
 
 
 
-def frozen_graph_from_checkpoint(model_dir, output_node_names = ''):
+def freeze_graph(model_dir, output_node_names = ''):
 
     # We retrieve our checkpoint fullpath
     checkpoint = tf.train.get_checkpoint_state(model_dir)
@@ -56,6 +56,22 @@ def frozen_graph_from_checkpoint(model_dir, output_node_names = ''):
 
     print("%d ops in the final graph." % len(output_graph_def.node))
 
+
+
+
+
+def save_model(session, output_file):
+
+    builder = tf.saved_model.builder.SavedModelBuilder(output_file)
+    builder.add_meta_graph_and_variables(
+        session,
+        [tf.saved_model.tag_constants.SERVING],
+        clear_devices=True
+        )
+
+    builder.save()
+
+    print ("Model saved in " + output_file)
 
 
 if __name__ == '__main__':
