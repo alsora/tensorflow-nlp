@@ -1,6 +1,12 @@
 # Compiled class file
 *.class
 
+# JNI folder
+/jni/
+
+#License files
+LICENSE
+
 # Log file
 *.log
 
