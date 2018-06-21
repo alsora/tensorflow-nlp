@@ -20,7 +20,7 @@ public class HelloTF {
       // Execute the "MyConst" operation in a Session.
       try (Session s = new Session(g);
            Tensor output = s.runner().fetch("MyConst").run().get(0)) {
-        System.out.println(new String(output.bytesValue(), "UTF-8"));
+            System.out.println(new String(output.bytesValue(), "UTF-8"));
       }
     }
   }

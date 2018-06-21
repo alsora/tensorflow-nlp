@@ -39,9 +39,14 @@ tf.flags.DEFINE_float("l2_reg_lambda", 0.0, "L2 regularization lambda (default: 
 # Training parameters
 tf.flags.DEFINE_integer("batch_size", 64, "Batch Size (default: 64)")
 tf.flags.DEFINE_integer("num_epochs", 10, "Number of training epochs (default: 10)")
+
+# Saver parameters
 tf.flags.DEFINE_integer("evaluate_every", 2000, "Evaluate model on dev set after this many steps (default: 2000)")
 tf.flags.DEFINE_integer("checkpoint_every", 2000, "Save model after this many steps (default: 2000)")
 tf.flags.DEFINE_integer("num_checkpoints", 25, "Max number of checkpoints to store (default: 25)")
+tf.flags.DEFINE_boolean("summary", False, "Save train summaries to folder (default: False)")
+
+
 # Misc Parameters
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
@@ -71,7 +76,8 @@ def preprocess():
     x_text, y = load_utils.load_data_and_labels(files_list)
 
     # Build vocabulary
-    max_element_length = max([len(x.split(" ")) for x in x_text])
+    max_element_length = max([len(x.split(" ")) for x in x_text]) 
+    # max_element_length = 20
 
     word_dict, reversed_dict = load_utils.build_dict(x_text, FLAGS.output_dir)
     
@@ -100,7 +106,6 @@ def preprocess():
     print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_valid)))
     
     return x_train, y_train, word_dict, reversed_dict, x_valid, y_valid
-
 
 
 
@@ -204,24 +209,26 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
                   model.dropout_keep_prob: FLAGS.dropout_keep_prob
                 }
 
-                _, step, summaries, loss, accuracy = sess.run(
-                    [model.optimizer, model.global_step, train_summary_op, model.loss, model.accuracy],feed_dict)
+                if FLAGS.summary:
+                    _, step, summaries, loss, accuracy = sess.run(
+                        [model.optimizer, model.global_step, train_summary_op, model.loss, model.accuracy],feed_dict)
+                                    
+                    train_summary_writer.add_summary(summaries, step)
+                else:
+                    _, step, loss = sess.run(
+                        [model.optimizer, model.global_step, model.loss],feed_dict)
+
 
                 epoch = ( step // num_batches_per_epoch) + 1
-                relative_step = step % num_batches_per_epoch
+                relative_step = (step % num_batches_per_epoch) + 1
                 time_str = datetime.datetime.now().isoformat()
-                print("{}: epoch {}/{}, step {}/{}, loss {:g}, acc {:g}".format(time_str, epoch, FLAGS.num_epochs, relative_step, num_batches_per_epoch, loss, accuracy))
-
-                train_summary_writer.add_summary(summaries, step)
-
-                return accuracy
+                print("{}: epoch {}/{}, step {}/{}, loss {:g}".format(time_str, epoch, FLAGS.num_epochs, relative_step, num_batches_per_epoch, loss))
 
 
             def dev_step(x_valid, y_valid, writer=None):
                 """
                 Evaluates model on the full validation set
                 """
-
                 valid_batches = load_utils.batch_iter(list(zip(x_valid, y_valid)), FLAGS.batch_size, 1)
 
                 sum_accuracy, cnt = 0, 0
@@ -234,14 +241,18 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
                         model.dropout_keep_prob: 1.0
                     }
 
-                    step, summaries, loss, accuracy = sess.run(
-                        [model.global_step, dev_summary_op, model.loss, model.accuracy], feed_dict)
+                    if FLAGS.summary:
+                        step, summaries, loss, accuracy = sess.run(
+                            [model.global_step, dev_summary_op, model.loss, model.accuracy], feed_dict)
+                        if writer:
+                            writer.add_summary(summaries, step)
+                    else:
+                        step, loss, accuracy = sess.run(
+                            [model.global_step, model.loss, model.accuracy], feed_dict)    
+                    
 
                     sum_accuracy += accuracy
                     cnt += 1
-
-                if writer:
-                    writer.add_summary(summaries, step)
 
                 valid_accuracy = sum_accuracy / cnt
 
@@ -264,15 +275,14 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
                     if valid_accuracy > max_accuracy:
                         max_accuracy = valid_accuracy
                         path = saver.save(sess, checkpoint_prefix, global_step=current_step)
+                        saver_utils.save_model(sess, os.path.join(FLAGS.output_dir, "saved"))
                         print("Saved model with better accuracy to {}\n".format(path))
-                        continue
+
 
                 if current_step % FLAGS.checkpoint_every == 0:
                     path = saver.save(sess, checkpoint_prefix, global_step=current_step)
                     print("Saved model checkpoint to {}\n".format(path))
                                 
-            path = saver.save(sess, checkpoint_prefix, global_step=current_step + 1)
-            saver_utils.save_model(sess, os.path.join(FLAGS.output_dir, "saved"))
 
 
 

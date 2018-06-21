@@ -66,7 +66,7 @@ This framework allows to easily create Neural Networks model and train/test them
 
 To check if everything is working fine, it's possible to perform the train of a neural network for a sentiment classification task on the provided sample_data.
 
-        $ cd tf-helper
+        $ cd python
         $ python train.py 
 
 It's possible to see all the available flags using 
@@ -97,6 +97,11 @@ Follow these steps to install the Java bindings for Tensorflow.
 ### Installation
 
 Follow these steps to install Tensorflow.js
+
+  - Install via [npm](https://www.npmjs.com/) all the required dependencies. Note that an up-to-date version of node is required.
+  
+        $ cd node
+        $ npm install .
 
 
 

@@ -2,7 +2,7 @@
   "name": "tensorflow-text",
   "version": "1.0.0",
   "description": "library for tensorflow test and inference in node.js",
-  "main": "lib/tensorflow-text.js",
+  "main": "lib/tensorflowtext.js",
   "author": "Alberto Soragna",
   "license": "ISC",
   "devDependencies": {

@@ -6,11 +6,11 @@ import numpy as np
 import os
 import time
 import argparse
+import shutil
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model_dir', default=1, help="Path to the folder containing the network model",
-                    type=int)
+parser.add_argument('--model_dir', default=1, help="Path to the folder containing the network model")
 parser.add_argument('--output_node_names', default='output/predictions', help="Comma separated list of output node names")
 
 
@@ -60,9 +60,12 @@ def freeze_graph(model_dir, output_node_names = ''):
 
 
 
-def save_model(session, output_file):
+def save_model(session, output_folder):
 
-    builder = tf.saved_model.builder.SavedModelBuilder(output_file)
+    if os.path.exists(output_folder):
+        shutil.rmtree(output_folder)
+
+    builder = tf.saved_model.builder.SavedModelBuilder(output_folder)
     builder.add_meta_graph_and_variables(
         session,
         [tf.saved_model.tag_constants.SERVING],
@@ -71,7 +74,7 @@ def save_model(session, output_file):
 
     builder.save()
 
-    print ("Model saved in " + output_file)
+    print ("Model saved in " + output_folder)
 
 
 if __name__ == '__main__':
