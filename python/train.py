@@ -24,7 +24,7 @@ tf.flags.DEFINE_string("model", "blstm", "Network model to train: blstm | blstm_
 # Model directory
 tf.flags.DEFINE_string("output_dir", "", "Where to save the trained model, checkpoints and stats (default: current_dir/runs/timestamp)")
 
-# Model Hyperparameters
+# Models Hyperparameters
 tf.flags.DEFINE_integer("embedding_dim", 300, "Dimensionality of character embedding. For cnn: use 128. Not used if loading a pretrained embedding. (default: 300)")
 tf.flags.DEFINE_string("filter_sizes", "3,4,5", "Comma-separated filter sizes (default: '3,4,5')")
 tf.flags.DEFINE_integer("num_filters", 128, "Number of filters per filter size (default: 128)")
@@ -114,6 +114,9 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
     # Training
     # ==================================================
 
+    sequence_length = x_train.shape[1]
+    num_classes = y_train.shape[1]
+
     with tf.Graph().as_default():
         session_conf = tf.ConfigProto(
           allow_soft_placement=FLAGS.allow_soft_placement,
@@ -124,35 +127,21 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
             if (FLAGS.model == "blstm"):
                 model = naive_rnn.NaiveRNN(
                     reversed_dict=reversed_dict,
-                    sequence_length=x_train.shape[1],
-                    num_classes=y_train.shape[1],
-                    embedding_size=FLAGS.embedding_dim,
-                    num_cells=FLAGS.num_cells,
-                    num_layers=FLAGS.num_layers,
-                    glove_embedding=FLAGS.glove_embedding,
-                    fasttext_embedding=FLAGS.fasttext_embedding,
-                    learning_rate=FLAGS.learning_rate)
+                    sequence_length=sequence_length,
+                    num_classes=num_classes,
+                    FLAGS=FLAGS)
             elif (FLAGS.model == "blstm_att"):
                 model = attention_rnn.AttentionRNN(
                     reversed_dict=reversed_dict,
-                    sequence_length=x_train.shape[1],
-                    num_classes=y_train.shape[1],
-                    embedding_size=FLAGS.embedding_dim,
-                    num_cells=FLAGS.num_cells,
-                    num_layers=FLAGS.num_layers,
-                    glove_embedding=FLAGS.glove_embedding,
-                    fasttext_embedding=FLAGS.fasttext_embedding,
-                    learning_rate=FLAGS.learning_rate)
+                    sequence_length=sequence_length,
+                    num_classes=num_classes,
+                    FLAGS=FLAGS)
             elif (FLAGS.model == "cnn"):
                 model = text_cnn.TextCNN(
                     reversed_dict = reversed_dict,
-                    sequence_length=x_train.shape[1],
-                    num_classes=y_train.shape[1],
-                    embedding_size=FLAGS.embedding_dim,
-                    filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
-                    num_filters=FLAGS.num_filters,
-                    learning_rate=FLAGS.learning_rate,
-                    l2_reg_lambda=FLAGS.l2_reg_lambda)
+                    sequence_length=sequence_length,
+                    num_classes=num_classes,
+                    FLAGS=FLAGS)
             else:
                 raise NotImplementedError()
 
@@ -219,19 +208,23 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
                         [model.optimizer, model.global_step, model.loss],feed_dict)
 
 
-                epoch = ( step // num_batches_per_epoch) + 1
-                relative_step = (step % num_batches_per_epoch) + 1
-                time_str = datetime.datetime.now().isoformat()
-                print("{}: epoch {}/{}, step {}/{}, loss {:g}".format(time_str, epoch, FLAGS.num_epochs, relative_step, num_batches_per_epoch, loss))
+                if (step + 1) % 10 == 0:
+                    epoch = ( step // num_batches_per_epoch) + 1
+                    relative_step = (step % num_batches_per_epoch) + 1
+                    time_str = datetime.datetime.now().isoformat()
+                    print("{}: epoch {}/{}, step {}/{}, loss {:g}".format(time_str, epoch, FLAGS.num_epochs, relative_step, num_batches_per_epoch, loss))
 
 
             def dev_step(x_valid, y_valid, writer=None):
                 """
-                Evaluates model on the full validation set
+                Evaluates model on a validation batch
                 """
                 valid_batches = load_utils.batch_iter(list(zip(x_valid, y_valid)), FLAGS.batch_size, 1)
+                num_valid_batches = len(valid_batches)
 
-                sum_accuracy, cnt = 0, 0
+                sum_accuracy = 0
+                #full_matrix = tf.get_variable("confusion", [num_classes, num_classes], dtype=tf.int32,initializer=tf.zeros_initializer)
+
                 for valid_batch in valid_batches:
                     x_valid_batch, y_valid_batch = zip(*valid_batch)
 
@@ -242,19 +235,24 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
                     }
 
                     if FLAGS.summary:
-                        step, summaries, loss, accuracy = sess.run(
-                            [model.global_step, dev_summary_op, model.loss, model.accuracy], feed_dict)
+                        step, summaries, loss, accuracy, cnf_matrix = sess.run(
+                            [model.global_step, dev_summary_op, model.loss, model.accuracy, model.cnf_matrix], feed_dict)
                         if writer:
                             writer.add_summary(summaries, step)
                     else:
-                        step, loss, accuracy = sess.run(
-                            [model.global_step, model.loss, model.accuracy], feed_dict)    
-                    
+                        step, loss, accuracy, cnf_matrix = sess.run(
+                            [model.global_step, model.loss, model.accuracy, model.cnf_matrix], feed_dict)    
 
                     sum_accuracy += accuracy
-                    cnt += 1
+                    #tf.assign_add(full_matrix, cnf_matrix)
 
-                valid_accuracy = sum_accuracy / cnt
+                valid_accuracy = accuracy / num_valid_batches
+
+                time_str = datetime.datetime.now().isoformat()
+                print("\nEvaluation:")
+                print("{}: step {}, valid_accuracy {:g}".format(time_str, step, valid_accuracy))
+                print("Confusion matrix:")
+                #print(full_matrix)
 
                 return valid_accuracy
 
@@ -266,18 +264,14 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
                 train_step(x_train_batch, y_train_batch)
                 current_step = tf.train.global_step(sess, model.global_step)
                 if current_step % FLAGS.evaluate_every == 0:
-                    print("\nEvaluation:")
+
                     valid_accuracy = dev_step(x_valid, y_valid, writer=None)
 
-                    time_str = datetime.datetime.now().isoformat()
-                    print("{}: step {}, valid_accuracy {:g}".format(time_str, current_step, valid_accuracy))
-                
                     if valid_accuracy > max_accuracy:
                         max_accuracy = valid_accuracy
-                        path = saver.save(sess, checkpoint_prefix, global_step=current_step)
-                        saver_utils.save_model(sess, os.path.join(FLAGS.output_dir, "saved"))
+                        path = os.path.join(FLAGS.output_dir, "saved")
+                        saver_utils.save_model(sess, path)
                         print("Saved model with better accuracy to {}\n".format(path))
-
 
                 if current_step % FLAGS.checkpoint_every == 0:
                     path = saver.save(sess, checkpoint_prefix, global_step=current_step)

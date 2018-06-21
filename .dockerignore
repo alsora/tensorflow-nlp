@@ -1,5 +1,11 @@
 #ignore data directory
 data
 
+#ignore node directory
+node
+
+#ignore java directory
+java
+
 #ignore git directory
 .git
