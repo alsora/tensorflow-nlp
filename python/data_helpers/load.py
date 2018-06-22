@@ -118,7 +118,7 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
 
 
 
-def build_dict(sentences, output_dir = None):
+def build_dict(sentences, output_dir = None, thresh_count = 1):
 
     words = list()
     for sentence in sentences:
@@ -129,8 +129,9 @@ def build_dict(sentences, output_dir = None):
     word_dict = dict()
     word_dict[PADDING_] = 0
     word_dict[UNK_] = 1
-    for word, _ in word_counter:
-        word_dict[word] = len(word_dict)
+    for word, count in word_counter:
+        word_dict[word] = len(word_dict) if count > thresh_count else 1
+
 
     # Save vocabulary to file
     if output_dir:
