@@ -130,7 +130,7 @@ def build_dict(sentences, output_dir = None, thresh_count = 1):
     word_dict[PADDING_] = 0
     word_dict[UNK_] = 1
     for word, count in word_counter:
-        word_dict[word] = len(word_dict) if count > thresh_count else 1
+        word_dict[word] = len(word_dict) if count > thresh_count else word_dict[UNK_]
 
 
     # Save vocabulary to file
