@@ -54,7 +54,7 @@ class AttentionRNN(object):
         with tf.name_scope("output"):
             #self.logits = tf.contrib.slim.fully_connected(self.attention_out, num_classes, activation_fn=None)
 
-            W = tf.get_variable("W", shape=[self.last_output.shape[1], num_classes], initializer=tf.contrib.layers.xavier_initializer())
+            W = tf.get_variable("W", shape=[self.attention_out.shape[1], num_classes], initializer=tf.contrib.layers.xavier_initializer())
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
 
             l2_loss += tf.nn.l2_loss(W)
