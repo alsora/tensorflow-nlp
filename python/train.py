@@ -10,7 +10,7 @@ import data_helpers.vocab as vocab_utils
 from tf_helpers.models import naive_rnn, attention_rnn, text_cnn
 from tf_helpers import saver_utils
 from tensorflow.contrib import learn
-
+from sklearn.model_selection import StratifiedShuffleSplit
 # Parameters
 # ==================================================
 
@@ -85,20 +85,15 @@ def preprocess():
     
     x = np.array(x)
     y = np.array(y)
-    
+
     # Randomly shuffle data
-    np.random.seed(10)
-    shuffle_indices = np.random.permutation(np.arange(len(y)))
-    x_shuffled = x[shuffle_indices]
-    y_shuffled = y[shuffle_indices]
+    sss = StratifiedShuffleSplit(n_splits=1, test_size=FLAGS.dev_sample_percentage, random_state=None)
+    for train_index, valid_index in sss.split(x, y):
+        x_train, x_valid =  x[train_index], x[valid_index]
+        y_train, y_valid = y[train_index], y[valid_index]
 
-    # Split train/test set
-    # TODO: This is very crude, should use cross-validation
-    dev_sample_index = -1 * int(FLAGS.dev_sample_percentage * float(len(y)))
-    x_train, x_valid = x_shuffled[:dev_sample_index], x_shuffled[dev_sample_index:]
-    y_train, y_valid = y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
 
-    del x, y, x_shuffled, y_shuffled
+    del x, y
 
     #x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=FLAGS.dev_sample_percentage)
 
@@ -207,7 +202,6 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
                     _, step, loss = sess.run(
                         [model.optimizer, model.global_step, model.loss],feed_dict)
 
-
                 if (step + 1) % 10 == 0:
                     epoch = ( step // num_batches_per_epoch) + 1
                     relative_step = (step % num_batches_per_epoch) + 1
@@ -219,12 +213,13 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
                 """
                 Evaluates model on a validation batch
                 """
-                valid_batches = load_utils.batch_iter(list(zip(x_valid, y_valid)), FLAGS.batch_size, 1)
-                num_valid_batches = len(valid_batches)
+                print("\nEvaluation:")
+                batch_size = FLAGS.batch_size
+                valid_batches = load_utils.batch_iter(list(zip(x_valid, y_valid)), batch_size, 1)
+                num_valid_batches = (len(x_valid) - 1) // batch_size + 1
 
                 sum_accuracy = 0
-                #full_matrix = tf.get_variable("confusion", [num_classes, num_classes], dtype=tf.int32,initializer=tf.zeros_initializer)
-
+                model.confusion.load(tf.zeros([num_classes,num_classes], dtype=tf.int32 ))
                 for valid_batch in valid_batches:
                     x_valid_batch, y_valid_batch = zip(*valid_batch)
 
@@ -236,23 +231,21 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
 
                     if FLAGS.summary:
                         step, summaries, loss, accuracy, cnf_matrix = sess.run(
-                            [model.global_step, dev_summary_op, model.loss, model.accuracy, model.cnf_matrix], feed_dict)
+                            [model.global_step, dev_summary_op, model.loss, model.accuracy, model.confusion_update], feed_dict)
                         if writer:
                             writer.add_summary(summaries, step)
                     else:
                         step, loss, accuracy, cnf_matrix = sess.run(
-                            [model.global_step, model.loss, model.accuracy, model.cnf_matrix], feed_dict)    
+                            [model.global_step, model.loss, model.accuracy, model.confusion_update], feed_dict)    
 
                     sum_accuracy += accuracy
-                    #tf.assign_add(full_matrix, cnf_matrix)
 
-                valid_accuracy = accuracy / num_valid_batches
+                valid_accuracy = sum_accuracy / num_valid_batches
 
                 time_str = datetime.datetime.now().isoformat()
-                print("\nEvaluation:")
                 print("{}: step {}, valid_accuracy {:g}".format(time_str, step, valid_accuracy))
                 print("Confusion matrix:")
-                #print(full_matrix)
+                print(cnf_matrix)
 
                 return valid_accuracy
 

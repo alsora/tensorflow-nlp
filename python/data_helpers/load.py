@@ -147,7 +147,7 @@ def build_dict(sentences, output_dir = None):
 
 def transform_text(data, word_dict, max_element_length):
 
-    x = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict[UNK_]), d)), data))
+    x = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict[UNK_]), d.split(" "))), data))
     x = list(map(lambda d: d[:max_element_length], x))
     x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[PADDING_]], x))
 

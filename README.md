@@ -103,7 +103,10 @@ Follow these steps to install Tensorflow.js
         $ cd node
         $ npm install .
 
+  - Validate the installation by running an LSTM example.
 
+        $ cd lib/tests/lstm
+        $ node index.js
 
 ## Implemented Neural Networks:
 

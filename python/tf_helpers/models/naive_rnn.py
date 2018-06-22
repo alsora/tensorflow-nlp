@@ -67,7 +67,20 @@ class NaiveRNN(object):
             self.optimizer = opt.apply_gradients(self.grads_and_vars, global_step=self.global_step)
 
         with tf.name_scope("accuracy"):
+            # Convert 1 hot input into a dense vector
             dense_y = tf.argmax(self.input_y, 1, output_type=tf.int32)
+
+            # Compute accuracy
             correct_predictions = tf.equal(self.predictions, dense_y)
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
-            self.cnf_matrix = tf.confusion_matrix(labels=dense_y, predictions=self.predictions, num_classes=num_classes)
+
+            # Compute a per-batch confusion matrix
+            batch_confusion = tf.confusion_matrix(labels=dense_y, predictions=self.predictions, num_classes=num_classes)
+            # Create an accumulator variable to hold the counts
+            self.confusion = tf.Variable( tf.zeros([num_classes,num_classes], dtype=tf.int32 ), name='confusion' )
+            # Create the update op for doing a "+=" accumulation on the batch
+            self.confusion_update = self.confusion.assign( self.confusion + batch_confusion )
+
+
+
+
