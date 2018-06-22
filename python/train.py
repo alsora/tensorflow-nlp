@@ -219,7 +219,7 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
                 num_valid_batches = (len(x_valid) - 1) // batch_size + 1
 
                 sum_accuracy = 0
-                model.confusion.load(tf.zeros([num_classes,num_classes], dtype=tf.int32 ))
+                model.confusion.load(np.zeros([num_classes,num_classes]))
                 for valid_batch in valid_batches:
                     x_valid_batch, y_valid_batch = zip(*valid_batch)
 
