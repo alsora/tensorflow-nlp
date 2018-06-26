@@ -4,6 +4,7 @@ import itertools
 import json
 import collections
 import os
+import operator
 
 
 PADDING_ = "<padding>"
@@ -130,19 +131,37 @@ def build_dict(sentences, output_dir = None, thresh_count = 1):
     word_dict[PADDING_] = 0
     word_dict[UNK_] = 1
     for word, count in word_counter:
-        word_dict[word] = len(word_dict) if count > thresh_count else word_dict[UNK_]
-
+        if count >= thresh_count:
+            word_dict[word] = len(word_dict)
+        else:
+            word_dict[word] = word_dict[UNK_]        
 
     # Save vocabulary to file
     if output_dir:
         output_file = os.path.join(output_dir, "vocab_words")
         print("Saving vocabulary to file: " + output_file)
+        sorted_dict = sorted(word_dict.items(), key=operator.itemgetter(1))
         with open(output_file, "w") as f:
-            f.write("\n".join(token for token in word_dict))
+            f.write("\n".join(elem[0] for elem in sorted_dict))
 
     reversed_dict = dict(zip(word_dict.values(), word_dict.keys()))
 
     return word_dict, reversed_dict
+
+
+def load_dict(path):
+
+    word_dict = dict()
+    with open(path) as f:
+        for index, line in enumerate(f):
+            if not line:
+                print ("Error reading line from dict: " + line)
+                return {}
+
+            word_dict[line.strip()] = len(word_dict)
+
+
+    return word_dict
 
 
 
