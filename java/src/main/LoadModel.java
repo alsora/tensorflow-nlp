@@ -29,7 +29,7 @@ public class LoadModel {
 
 		
 		//Path to a directory containing: saved folder, checkpoints folder, vocab_words and vocab_labels files
-		String modelDir = "/Users/alsora/musixmatch/mxm_repositories/tensorflow-text/data/models/blstm_att1530026090/";
+		String modelDir = "";
 		
 		String sentence = "beautiful like love peace best friends";
 		
@@ -41,11 +41,13 @@ public class LoadModel {
 		
 		
 		sentence = sentence.toLowerCase();
-
-		String[] splittedSentence = textProcessor.splitPadSentence(sentence);
 		int batch_size = 1;
 
-		input_t = textProcessor.textToInputTensor(splittedSentence);
+
+		String[][] data = new String[batch_size][sequenceLength];
+		data[0] = textProcessor.splitPadSentence(sentence);
+
+		input_t = textProcessor.textToInputTensor(data);
 		Float prob = (float) 1.0;
 		dropout_keep_prob = Tensor.create(prob);
 

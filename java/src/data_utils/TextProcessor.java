@@ -83,53 +83,67 @@ public class TextProcessor {
 	}
 	
 	
-	public String[] splitPadSentence(String sentence) {
-		
-		String[] splitted = sentence.split(" ");
-		String[] output = new String[max_item_length]; 
+	public String[] padSentence(String[] sentence) {
 		
 		
-		for (int i = 0; i < max_item_length; i++) {
-			String word;
-			if (i < splitted.length) {
-				output[i] = splitted[i];
+		String[] output = new String[this.max_item_length]; 
+		
+		for (int i = 0; i < this.max_item_length; i++) {
+			if (i < sentence.length) {
+				output[i] = sentence[i];
 			}
 			else {
 				output[i] = paddingToken;
 			}
 		}
 		
-		
 		return output;
 		
 	}
 	
 	
-	public Tensor textToInputTensor(String[] splittedSentence) {
+	public String[] splitPadSentence(String sentence) {
 		
-		int batch_size = 1;
+		String[] splitted = sentence.split(" ");
 		
-		int[][] matrix_batch= new int[batch_size][splittedSentence.length];
+		String[] padded = padSentence(splitted);
 		
+		return padded;
+
+	}
+	
+	
+	public Tensor textToInputTensor(String[][] data) {
 		
-		for (int i = 0; i < splittedSentence.length; i++) {
+		if (data.length == 0) {
+			System.out.println("ERROR: provided empty data to TextProcessor.textToInputTensor!!!");
+			return Tensor.create(new int[1][this.max_item_length]);
+		}
+		
+		int[][] matrix_batch= new int[data.length][data[0].length];
+		
+		for (int b = 0; b < data.length; b ++) {
 			
-			String word = splittedSentence[i];
-
-			int word_id;
-
+			if (data[b].length != this.max_item_length) {
+				System.out.println("ERROR: element of data has wrong length in TextProcessor.textToInputTensor!!!");
+				return Tensor.create(new int[1][this.max_item_length]);
+			}
+			
+			for (int s = 0; s < data[b].length; s ++) {
 				
-		   if (vocabWordsMap.containsKey(word)) {
-			   word_id = vocabWordsMap.get(word);
-			   } 
-		   else {
-			   word_id = vocabWordsMap.get(unknownToken);
-		    }
-		   
-		   //System.out.println("WORD---->" + word + "--->" + word_id);
-
-			for (int j = 0; j < batch_size; j ++) {
-				matrix_batch[j][i] = word_id;
+				String word = data[b][s];
+				
+				int word_id;
+				
+			   if (vocabWordsMap.containsKey(word)) {
+				   word_id = vocabWordsMap.get(word);
+				   } 
+			   else {
+				   word_id = vocabWordsMap.get(unknownToken);
+			    }
+			   
+			   matrix_batch[b][s] = word_id;
+				  	   
 			}
 			
 		}
