@@ -2,204 +2,121 @@
 
 import argparse
 import tensorflow as tf
-from collections import Counter
 import json
 import os
 import sys
 import re
+import operator
+import collections
+
+PADDING_ = "<padding>"
+UNK_ = "<unk>"
+
+
+def build_dict_words(sentences, output_dir = None, threshold_count = 1):
+
+    words = list()
+    for sentence in sentences:
+        for word in sentence.split(" "):
+            words.append(word)
+
+    word_counter = collections.Counter(words).most_common()
+    word_dict = dict()
+    word_dict[PADDING_] = 0
+    word_dict[UNK_] = 1
+    for word, count in word_counter:
+        if count >= threshold_count:
+            word_dict[word] = len(word_dict)
+        else:
+            word_dict[word] = word_dict[UNK_]        
+
+    # Save vocabulary to file
+    if output_dir:
+        output_file = os.path.join(output_dir, "vocab_words")
+        print("Saving words vocabulary to file: " + output_file)
+        sorted_dict = sorted(word_dict.items(), key=operator.itemgetter(1))
+        with open(output_file, "w") as f:
+            f.write("\n".join(elem[0] for elem in sorted_dict))
+
+    reversed_dict = dict(zip(word_dict.values(), word_dict.keys()))
+
+    return word_dict, reversed_dict
 
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--min_count', default=1, help="Minimum count for words in the dataset",
-                    type=int)
-parser.add_argument('--input', default='', help="Path to the input txt file")
-parser.add_argument('--output', default='', help="Path where to save the output vocab file")
+def build_dict_labels(labels, output_dir = None):
+
+    # count distinct labels
+    distinct_labels = set(labels)
+
+    labels_dict = {}
+    for i,label in enumerate(distinct_labels):
+        labels_dict[label] = i
+
+    # Save vocabulary to file
+    if output_dir:
+        output_file = os.path.join(output_dir, "vocab_labels")
+        print("Saving labels vocabulary to file: " + output_file)
+        sorted_dict = sorted(labels_dict.items(), key=operator.itemgetter(1))
+        with open(output_file, "w") as f:
+            f.write("\n".join(elem[0] for elem in sorted_dict))
+
+    reversed_dict = dict(zip(labels_dict.values(), labels_dict.keys()))
+
+    return labels_dict, reversed_dict
 
 
-# Hyper parameters for the vocab
-NUM_OOV_BUCKETS = 1 # number of buckets (= number of ids) for unknown words
-PAD_WORD = '<pad>'
-PAD_TAG = 'O'
+def load_dict(path):
+
+    dict_ = dict()
+    with open(path) as f:
+        for index, line in enumerate(f):
+            if not line:
+                print ("Error reading line from dict: " + line)
+                return {}
+
+            dict_[line.strip()] = len(dict_)
+
+    return dict_
 
 
-def clean_str(string):
-    """
-    Tokenization/string cleaning for all datasets except for SST.
-    Original taken from https://github.com/yoonkim/CNN_sentence/blob/master/process_data.py
-    """
-    string = re.sub(r"[^A-Za-z0-9(),!?\'\`]", " ", string)
-    string = re.sub(r"\'s", " \'s", string)
-    string = re.sub(r"\'ve", " \'ve", string)
-    string = re.sub(r"n\'t", " n\'t", string)
-    string = re.sub(r"\'re", " \'re", string)
-    string = re.sub(r"\'d", " \'d", string)
-    string = re.sub(r"\'ll", " \'ll", string)
-    string = re.sub(r",", " , ", string)
-    string = re.sub(r"!", " ! ", string)
-    string = re.sub(r"\(", " \( ", string)
-    string = re.sub(r"\)", " \) ", string)
-    string = re.sub(r"\?", " \? ", string)
-    string = re.sub(r"\s{2,}", " ", string)
-    return string.strip().lower()
+    def load_reverse_dict(path):
+
+    dict_ = dict()
+    with open(path) as f:
+        for index, line in enumerate(f):
+            if not line:
+                print ("Error reading line from dict: " + line)
+                return {}
+            dict_[len(dict_)] = line.strip()
+
+    return dict_
 
 
-def save_vocab_to_txt_file(vocab, txt_path):
-    """Writes one token per line, 0-based line id corresponds to the id of the token.
+def transform_text(data, word_dict):
 
-    Args:
-        vocab: (iterable object) yields token
-        txt_path: (stirng) path to vocab file
-    """
-    with open(txt_path, "w") as f:
-        f.write("\n".join(token for token in vocab))
+    # Build vocabulary
+    max_element_length = max([len(x.split(" ")) for x in data]) 
+    # max_element_length = 20
 
+    x = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict[UNK_]), d.split(" "))), data))
+    x = list(map(lambda d: d[:max_element_length], x))
+    x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[PADDING_]], x))
 
-def save_dict_to_json(d, json_path):
-    """Saves dict to json file
-
-    Args:
-        d: (dict)
-        json_path: (string) path to json file
-    """
-    with open(json_path, 'w') as f:
-        d = {k: v for k, v in d.items()}
-        json.dump(d, f, indent=4)
+    return x
 
 
-def update_vocab_from_file(txt_path, vocab, clean=True):
-    """Update word and tag vocabulary from dataset
+def transform_labels(labels, labels_dict):
 
-    Args:
-        txt_path: (string) path to file, one sentence per line
-        vocab: (dict or Counter) with update method
+    # count distinct labels
+    distinct_labels = set(labels)
+    num_labels = len(distinct_labels)
 
-    Returns:
-        dataset_size: (int) number of elements in the dataset
-    """
-    with open(txt_path) as f:
-        for i, line in enumerate(f):
-            if clean:
-                line = clean_str(line)
-            vocab.update(line.split(' '))
+    y = []
+    for label in labels:
+        one_hot_vect = [0] * num_labels
+        one_hot_vect[labels_dict[label]] = 1
+        y.append(one_hot_vect)
 
-
-    return i + 1
-
-def update_vocab_from_list(data, vocab, clean=True):
-    """Update word and tag vocabulary from dataset
-
-    Args:
-        data: (list) list of strings containing one sentence per line
-        vocab: (dict or Counter) with update method
-
-    Returns:
-        dataset_size: (int) number of elements in the dataset
-    """
-
-    for i, line in enumerate(data):
-        if clean:
-            line = clean_str(line)
-        vocab.update(line.split(' '))
-
-
-    return i + 1
-
-
-
-def build_vocab_from_file(input_file, output_file, clean=True, min_count = 1, pad_element = "<pad>"):
-
-    # Build word vocab with train and test datasets
-    print("Building " + input_file + " vocabulary...")
-    words = Counter()
-    size_vocab = update_vocab_from_file(input_file, words, clean)
-    print("- done.")
-
-    # Only keep most frequent tokens
-    words = [tok for tok, count in words.items() if count >= min_count]
-
-    # Add pad token if specified
-    if pad_element and pad_element not in words:
-        words.append(pad_element)
-
-    # Save vocabularies to file
-    print("Saving vocabularies to file " + output_file)
-    save_vocab_to_txt_file(words, output_file)
-    print("- done.")
-
-
-    # Save datasets properties in json file
-    sizes = {
-        'train_size': size_vocab,
-        'vocab_size': len(words) + NUM_OOV_BUCKETS,
-        'pad_element': pad_element,
-        'num_oov_buckets': NUM_OOV_BUCKETS
-    }
-    #save_dict_to_json(sizes, output_file + "stats")
-
-     # Logging sizes
-    to_print = "\n".join("- {}: {}".format(k, v) for k, v in sizes.items())
-    print("Characteristics of the dataset:\n{}".format(to_print))
-
-    lookup_table = tf.contrib.lookup.index_table_from_file(output_file, num_oov_buckets=NUM_OOV_BUCKETS)
-
-
-def build_vocab_from_list(data, output_file, clean=True, min_count = 1, pad_element = "<pad>"):
-
-    # Build word vocab with train and test datasets
-    print("Building vocabulary...")
-    words = Counter()
-    size_vocab = update_vocab_from_list(data, words, clean)
-    print("- done.")
-
-    # Only keep most frequent tokens
-    words = [tok for tok, count in words.items() if count >= min_count]
-
-    # Add pad token if specified
-    if pad_element and pad_element not in words:
-        words.append(pad_element)
-
-    # Save vocabularies to file
-    print("Saving vocabulary to file: " + output_file)
-    save_vocab_to_txt_file(words, output_file)
-    print("- done.")
-
-
-    # Save datasets properties in json file
-    sizes = {
-        'train_size': size_vocab,
-        'vocab_size': len(words) + NUM_OOV_BUCKETS,
-        'pad_element': pad_element,
-        'num_oov_buckets': NUM_OOV_BUCKETS
-    }
-    #save_dict_to_json(sizes, output_file + "stats")
-
-     # Logging sizes
-    to_print = "\n".join("- {}: {}".format(k, v) for k, v in sizes.items())
-    print("Characteristics of the dataset:\n{}".format(to_print))
-
-    lookup_table = tf.contrib.lookup.index_table_from_file(output_file, num_oov_buckets=NUM_OOV_BUCKETS)
-
-
-
-
-
-def transform_data(data, lookup_table):
-
-    # Convert line into list of tokens, splitting by white space
-    data = data.map(lambda string: tf.string_split([string]).values)
-
-    # Lookup tokens to return their ids
-    data = data.map(lambda tokens: (lookup_table.lookup(tokens), tf.size(tokens)))
-
-    return data
-
-
-
-
-if __name__ == '__main__':
-    args = parser.parse_args()
-
-    build_vocab(args.input, args.output, args.min_count)
-
+    return y
 

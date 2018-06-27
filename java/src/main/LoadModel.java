@@ -27,31 +27,32 @@ public class LoadModel {
 		Tensor logits;
 		Tensor dropout_keep_prob;
 
-
-		String savedModelDir = "";
-		String vocabFile = "";
 		
-
-		TextProcessor textProcessor = new TextProcessor();
-
-		textProcessor.loadVocabMap(vocabFile);
-
-		String sentence = "This is a good morning";
+		//Path to a directory containing: saved folder, checkpoints folder, vocab_words and vocab_labels files
+		String modelDir = "/Users/alsora/musixmatch/mxm_repositories/tensorflow-text/data/models/blstm_att1530026090/";
+		
+		String sentence = "beautiful like love peace best friends";
+		
+		
+		String vocabWordsFile = modelDir + "vocab_words";
+		String vocabLabelsFile = modelDir + "vocab_labels";
+		int sequenceLength = 119;
+		TextProcessor textProcessor = new TextProcessor(sequenceLength, vocabWordsFile, vocabLabelsFile);
+		
+		
+		sentence = sentence.toLowerCase();
 
 		String[] splittedSentence = textProcessor.splitPadSentence(sentence);
 		int batch_size = 1;
-
 
 		input_t = textProcessor.textToInputTensor(splittedSentence);
 		Float prob = (float) 1.0;
 		dropout_keep_prob = Tensor.create(prob);
 
-
-		SavedModelBundle model = SavedModelBundle.load(savedModelDir, "serve");
+		String savedModelFolder = modelDir + "saved";
+		SavedModelBundle model = SavedModelBundle.load(savedModelFolder, "serve");
 		Session s = model.session();
 		Graph g = model.graph();
-
-		System.out.println("LOADED !");
 		
 		/*
 		Iterator<Operation> it = g.operations();
@@ -77,7 +78,9 @@ public class LoadModel {
 		int[] copy_prediction = new int[batch_size];
 		prediction.copyTo(copy_prediction);
 		for (int i = 0; i < batch_size; i++) {
-			System.out.println(copy_prediction[i]);
+			int int_pred = copy_prediction[i];
+			String string_pred = textProcessor.labelToString(int_pred);
+			System.out.println("LABEL_ID: " + int_pred + " -> " + string_pred);
 		}
 
 
@@ -93,7 +96,6 @@ public class LoadModel {
 			System.out.println(copy_logits[0][i]);
 
 		}
-
 
 	}
 

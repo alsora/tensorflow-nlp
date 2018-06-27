@@ -24,7 +24,6 @@ RUN \
     pip install tensorflow && \
     pip install tensor2tensor
 
-
 COPY \
     ./python $HOME/tensorflow-text
 

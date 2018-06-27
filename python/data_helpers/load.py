@@ -2,13 +2,9 @@ import numpy as np
 import re
 import itertools
 import json
-import collections
 import os
 import operator
-
-
-PADDING_ = "<padding>"
-UNK_ = "<unk>"
+import collections
 
 
 def clean_str(string):
@@ -62,38 +58,20 @@ def load_data_and_labels(data_files, output_dir = None):
         examples = []
 
     # Save label of every example
-    labels = []
+    y_text = []
     x_text = []
     for line in examples:
         line = line.strip()
         split = line.split('\t',1)
-        labels.append(split[0])
+        y_text.append(split[0])
         x_text.append(split[1])
 
-    assert len(x_text) == len(labels)
-
-    # count distinct labels
-    distinct_labels = set(labels)
-    num_labels = len(distinct_labels)
-
-    dict_labels = {}
-    for i,label in enumerate(distinct_labels):
-        dict_labels[label] = i
-
-    y = []
-    for label in labels:
-        one_hot_vect = [0] * num_labels
-        one_hot_vect[dict_labels[label]] = 1
-        y.append(one_hot_vect)
+    assert len(x_text) == len(y_text)
 
     x_text = [clean_str(sent) for sent in x_text]
 
-    if output_dir:
-        output_file = os.path.join(output_dir, "vocab_labels")
-        with open(output_file, 'w') as fp:
-            json.dump(dict_labels, fp)
 
-    return x_text, y
+    return x_text, y_text
 
 
 
@@ -119,56 +97,3 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
 
 
 
-def build_dict(sentences, output_dir = None, thresh_count = 1):
-
-    words = list()
-    for sentence in sentences:
-        for word in sentence.split(" "):
-            words.append(word)
-
-    word_counter = collections.Counter(words).most_common()
-    word_dict = dict()
-    word_dict[PADDING_] = 0
-    word_dict[UNK_] = 1
-    for word, count in word_counter:
-        if count >= thresh_count:
-            word_dict[word] = len(word_dict)
-        else:
-            word_dict[word] = word_dict[UNK_]        
-
-    # Save vocabulary to file
-    if output_dir:
-        output_file = os.path.join(output_dir, "vocab_words")
-        print("Saving vocabulary to file: " + output_file)
-        sorted_dict = sorted(word_dict.items(), key=operator.itemgetter(1))
-        with open(output_file, "w") as f:
-            f.write("\n".join(elem[0] for elem in sorted_dict))
-
-    reversed_dict = dict(zip(word_dict.values(), word_dict.keys()))
-
-    return word_dict, reversed_dict
-
-
-def load_dict(path):
-
-    word_dict = dict()
-    with open(path) as f:
-        for index, line in enumerate(f):
-            if not line:
-                print ("Error reading line from dict: " + line)
-                return {}
-
-            word_dict[line.strip()] = len(word_dict)
-
-
-    return word_dict
-
-
-
-def transform_text(data, word_dict, max_element_length):
-
-    x = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict[UNK_]), d.split(" "))), data))
-    x = list(map(lambda d: d[:max_element_length], x))
-    x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[PADDING_]], x))
-
-    return x

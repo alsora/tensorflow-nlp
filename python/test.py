@@ -14,8 +14,7 @@ import csv
 # ==================================================
 
 # Data Parameters
-tf.flags.DEFINE_string("positive_data_file", "./data/rt-polaritydata/rt-polarity.pos", "Data source for the positive data.")
-tf.flags.DEFINE_string("negative_data_file", "./data/rt-polaritydata/rt-polarity.neg", "Data source for the negative data.")
+tf.flags.DEFINE_string("data", "../data/dataset/sample_data/train.tsv", "Data source tab separated files. It's possible to provide more than 1 file using a comma")
 
 # Eval Parameters
 tf.flags.DEFINE_integer("batch_size", 64, "Batch Size (default: 64)")
@@ -41,6 +40,30 @@ if FLAGS.eval_train:
 else:
     x_raw = ["a masterpiece four years in the making", "everything is off."]
     y_test = [1, 0]
+
+
+'''
+# Load data
+print("Loading data...")
+files_list = FLAGS.data.split(",")
+x_text, y = load_utils.load_data_and_labels(files_list)
+
+# Build vocabulary
+max_element_length = max([len(x.split(" ")) for x in x_text]) 
+# max_element_length = 20
+
+word_dict, reversed_dict = load_utils.build_dict(x_text, FLAGS.output_dir)
+
+x = load_utils.transform_text(x_text, word_dict, max_element_length)
+
+x = np.array(x)
+y = np.array(y)
+'''
+
+
+x_raw = ["super beautiful like it very much best love", "terrible sad shit fuck worst ruined"]
+y_test = [1, 0]
+
 
 # Map data into vocabulary
 vocab_path = os.path.join(FLAGS.checkpoint_dir, "..", "vocab")

@@ -73,16 +73,14 @@ def preprocess():
     # Load data
     print("Loading data...")
     files_list = FLAGS.data.split(",")
-    x_text, y = load_utils.load_data_and_labels(files_list)
+    x_text, y_text = load_utils.load_data_and_labels(files_list)
 
-    # Build vocabulary
-    max_element_length = max([len(x.split(" ")) for x in x_text]) 
-    # max_element_length = 20
+    word_dict, reversed_dict = vocab_utils.build_dict_words(x_text, FLAGS.output_dir)
+    labels_dict, _ = vocab_utils.build_dict_labels(y_text, FLAGS.output_dir)
 
-    word_dict, reversed_dict = load_utils.build_dict(x_text, FLAGS.output_dir)
-    
-    x = load_utils.transform_text(x_text, word_dict, max_element_length)
-    
+    x = vocab_utils.transform_text(x_text, word_dict)
+    y = vocab_utils.transform_labels(y_text, labels_dict)
+
     x = np.array(x)
     y = np.array(y)
 
@@ -92,10 +90,7 @@ def preprocess():
         x_train, x_valid =  x[train_index], x[valid_index]
         y_train, y_valid = y[train_index], y[valid_index]
 
-
     del x, y
-
-    #x_train, x_valid, y_train, y_valid = train_test_split(x, y, test_size=FLAGS.dev_sample_percentage)
 
     print("Vocabulary Size: {:d}".format(len(word_dict)))
     print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_valid)))
