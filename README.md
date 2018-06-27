@@ -10,17 +10,9 @@ This repository contains scripts and libraries for different programming languag
   - Node.js for loading pretrained network models, performing test and inference.
 
 
-## Requirements:
-
-A Dockerfile is provided for using the framework in the best possible way, without having to care about manually intsalling all the dependences.
-
-If you want to exploit the Dockerfile, you only have to install [Docker](https://docs.docker.com/install/).
-
-Otherwise you can repeat all the commands included in the Dockerfile and locally install all the requirements.
-The main requirement is [Tensorflow](https://github.com/tensorflow/tensorflow).
-
 ## Python:
-
+The Python implementation of this framework is provided with a Dockerfile, in order to be easily used on servers or other machines.
+If you want to install the Framework using Docker, skip this section.
 
 ### Installation
 
@@ -38,14 +30,16 @@ The main requirement is [Tensorflow](https://github.com/tensorflow/tensorflow).
         $ python3
 
 
-        import tensorflow as tf
-        hello = tf.constant('Hello, TensorFlow!')
-        sess = tf.Session()
-        print(sess.run(hello))
+        >>> import tensorflow as tf
+        >>> hello = tf.constant('Hello, TensorFlow!')
+        >>> sess = tf.Session()
+        >>> print(sess.run(hello))
 
 
 
 ### Docker installation
+
+The only requirement in this case is to have [Docker](https://docs.docker.com/install/) installed  on the host machine.
 
 The repository contains some useful scripts to simplify the creation of a Docker image and the deployment of a Docker container.
 
@@ -84,12 +78,17 @@ Follow these steps to install the Java bindings for Tensorflow.
 
   - Download the .jar file and the Java Native Interface (JNI).
   
-        $ cd java/script
-        $ bash jni.sh
+        $ cd java
+        $ bash script/jni.sh
 
-  - In your preferred IDE, add the .jar file to the Java project build path and link to it the native libraries contained in the jni folder. 
+  - In your preferred IDE, add the .jar file to the Java project build path and link to it the native libraries contained in the jni folder.
+  Then you can validate the installation by running the HelloTF.java example.
 
-  - Validate the installation by running the HelloTF.java example.
+
+  - How to compile and validate the Java framework from command line, if you do not want to use an IDE:
+
+        $ javac -d bin -sourcepath src -cp lib/libtensorflow-1.8.0.jar src/main/HelloTF.java
+        $ java -cp bin:lib/libtensorflow-1.8.0.jar -Djava.library.path=jni main.HelloTF
 
 
 ## Node.js:
