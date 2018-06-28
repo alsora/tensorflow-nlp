@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Implementation-Title: tensorflow-text
+Implementation-Version: 1.0
+Class-Path: libtensorflow-1.8.0.jar

@@ -8,6 +8,8 @@ import datetime
 import data_helpers
 from text_cnn import TextCNN
 from tensorflow.contrib import learn
+import data_helpers.load as load_utils
+import data_helpers.vocab as vocab_utils
 import csv
 
 # Parameters
@@ -33,6 +35,9 @@ for attr, value in sorted(FLAGS.__flags.items()):
     print("{}={}".format(attr.upper(), value))
 print("")
 
+
+
+'''
 # CHANGE THIS: Load data. Load your own data here
 if FLAGS.eval_train:
     x_raw, y_test = data_helpers.load_data_and_labels(FLAGS.positive_data_file, FLAGS.negative_data_file)
@@ -42,7 +47,6 @@ else:
     y_test = [1, 0]
 
 
-'''
 # Load data
 print("Loading data...")
 files_list = FLAGS.data.split(",")
@@ -61,14 +65,17 @@ y = np.array(y)
 '''
 
 
-x_raw = ["super beautiful like it very much best love", "terrible sad shit fuck worst ruined"]
-y_test = [1, 0]
-
+x_text = ["super beautiful like it very much best love", "terrible sad shit fuck worst ruined"]
+y = [1, 0]
 
 # Map data into vocabulary
-vocab_path = os.path.join(FLAGS.checkpoint_dir, "..", "vocab")
-vocab_processor = learn.preprocessing.VocabularyProcessor.restore(vocab_path)
-x_test = np.array(list(vocab_processor.transform(x_raw)))
+dict_path = os.path.join(FLAGS.checkpoint_dir, "..", "vocab_words")
+word_dict, _ = vocab_utils.load_dict(x_text, FLAGS.output_dir)
+
+x = vocab_utils.transform_text(x_text, word_dict)
+
+x = np.array(x)
+y = np.array(y)
 
 print("\nEvaluating...\n")
 
@@ -95,20 +102,20 @@ with graph.as_default():
         predictions = graph.get_operation_by_name("output/predictions").outputs[0]
 
         # Generate batches for one epoch
-        batches = data_helpers.batch_iter(list(x_test), FLAGS.batch_size, 1, shuffle=False)
+        batches = data_helpers.batch_iter(list(x), FLAGS.batch_size, 1, shuffle=False)
 
         # Collect the predictions here
         all_predictions = []
 
-        for x_test_batch in batches:
-            batch_predictions = sess.run(predictions, {input_x: x_test_batch, dropout_keep_prob: 1.0})
+        for x_batch in batches:
+            batch_predictions = sess.run(predictions, {input_x: x_batch, dropout_keep_prob: 1.0})
             all_predictions = np.concatenate([all_predictions, batch_predictions])
 
 # Print accuracy if y_test is defined
-if y_test is not None:
-    correct_predictions = float(sum(all_predictions == y_test))
-    print("Total number of test examples: {}".format(len(y_test)))
-    print("Accuracy: {:g}".format(correct_predictions/float(len(y_test))))
+if y is not None:
+    correct_predictions = float(sum(all_predictions == y))
+    print("Total number of test examples: {}".format(len(y)))
+    print("Accuracy: {:g}".format(correct_predictions/float(len(y))))
 
 # Save the evaluation to a csv
 predictions_human_readable = np.column_stack((np.array(x_raw), all_predictions))

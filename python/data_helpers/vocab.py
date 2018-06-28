@@ -80,7 +80,7 @@ def load_dict(path):
     return dict_
 
 
-    def load_reverse_dict(path):
+def load_reverse_dict(path):
 
     dict_ = dict()
     with open(path) as f:

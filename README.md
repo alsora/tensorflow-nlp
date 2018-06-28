@@ -88,7 +88,7 @@ Follow these steps to install the Java bindings for Tensorflow.
   - How to compile and validate the Java framework from command line, if you do not want to use an IDE:
 
         $ javac -d bin -sourcepath src -cp lib/libtensorflow-1.8.0.jar src/main/HelloTF.java
-        $ java -cp bin:lib/libtensorflow-1.8.0.jar -Djava.library.path=jni main.HelloTF
+        $ java -cp bin:lib/libtensorflow-1.8.0.jar -Djava.library.path=jni/$(uname -s | tr '[:upper:]' '[:lower:]') main.HelloTF
 
 
 ## Node.js:

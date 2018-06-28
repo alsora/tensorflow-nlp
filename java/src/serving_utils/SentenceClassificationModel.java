@@ -28,6 +28,10 @@ public class SentenceClassificationModel {
 	
 	public SentenceClassificationModel(String modelDirPath, int sequenceLength){
 		
+		if (modelDirPath.substring(modelDirPath.length() - 1) != "/") {
+			modelDirPath += "/";
+		}
+		
 		String vocabWordsFile = modelDirPath + "vocab_words";
 		String vocabLabelsFile = modelDirPath + "vocab_labels";
 		this.sequenceLength = sequenceLength;
