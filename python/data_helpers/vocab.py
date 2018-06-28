@@ -4,6 +4,7 @@ import argparse
 import tensorflow as tf
 import json
 import os
+import numpy as np
 import sys
 import re
 import operator
@@ -37,6 +38,32 @@ def build_dict_words(sentences, output_dir = None, threshold_count = 1):
         sorted_dict = sorted(word_dict.items(), key=operator.itemgetter(1))
         with open(output_file, "w") as f:
             f.write("\n".join(elem[0] for elem in sorted_dict))
+
+    reversed_dict = dict(zip(word_dict.values(), word_dict.keys()))
+
+    return word_dict, reversed_dict
+
+def build_dict_NER(sentences, output_dir = None, thresh_count = 1):
+
+    words = list()
+    for sentence in sentences:
+        for word in sentence:
+            words.append(word)
+
+    word_counter = collections.Counter(words).most_common()
+    word_dict = dict()
+    word_dict[PADDING_] = 0
+    word_dict[UNK_] = 1
+    for word, count in word_counter:
+        word_dict[word] = len(word_dict) if count > thresh_count else word_dict[UNK_]
+
+
+    # Save vocabulary to file
+    if output_dir:
+        output_file = os.path.join(output_dir, "vocab_words")
+        print("Saving vocabulary to file: " + output_file)
+        with open(output_file, "w") as f:
+            f.write("\n".join(token for token in word_dict))
 
     reversed_dict = dict(zip(word_dict.values(), word_dict.keys()))
 
@@ -104,6 +131,24 @@ def transform_text(data, word_dict):
     x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[PADDING_]], x))
 
     return x
+
+
+def transform_text_NER(data,labels,labels_dict, word_dict, max_element_length):
+
+
+    x = list(map(lambda d: list([word_dict.get(w, word_dict[UNK_]) for w in d]), data))
+    x = list(map(lambda d: d[:max_element_length], x))
+    x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[PADDING_]], x))
+
+
+    padding_label = labels_dict['O']
+    padding_one_hot = np.zeros(len(labels_dict),dtype=int)
+    padding_one_hot[labels_dict['O']] = 1
+
+    y = list(map(lambda d: d + (max_element_length - len(d)) * [list(padding_one_hot)], labels))
+
+
+    return x,y
 
 
 def transform_labels(labels, labels_dict):
