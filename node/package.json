@@ -4,15 +4,17 @@
   "description": "library for tensorflow test and inference in node.js",
   "main": "lib/tensorflowtext.js",
   "author": "Alberto Soragna",
-  "license": "ISC",
+  "license": "MIT",
   "engines": {
     "node": ">=8.9.0"
   },
   "dependencies": {
-    "@tensorflow/tfjs": "^0.11.6",
-    "@tensorflow/tfjs-node": "^0.1.7"
+    "@tensorflow/tfjs": "0.11.6",
+    "@tensorflow/tfjs-core": "0.11.6",
+    "@tensorflow/tfjs-node": "0.1.6"
   },
-  "scripts": {
-    "postinstall": "yarn upgrade --pattern @tensorflow"
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/alsora/tensorflow-nlp"
   }
 }
