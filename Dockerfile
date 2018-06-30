@@ -25,7 +25,7 @@ RUN \
     pip install tensor2tensor
 
 COPY \
-    ./python $HOME/tensorflow-text
+    ./python $HOME/tensorflow-nlp
 
 RUN \
     cd tensorflow-text/script/ && \

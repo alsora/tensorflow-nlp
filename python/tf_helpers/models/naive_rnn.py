@@ -1,15 +1,17 @@
 import tensorflow as tf
 from tensorflow.contrib import rnn
 from tf_helpers.layer_utils import *
+from base_model import BaseModel
 
-
-class NaiveRNN(object):
+class NaiveRNN(BaseModel):
     """
     A Bidirection LSTM for text classification.
     Uses an embedding layer, followed by bLSTM and softmax layer.
     """
     def __init__(
         self, reversed_dict, sequence_length, num_classes, FLAGS):
+
+        super(NaiveRNN, self).__init__(FLAGS)
 
         # Placeholders for input, output and dropout
         self.input_x = tf.placeholder(tf.int32, [None, sequence_length], name="input_x")
