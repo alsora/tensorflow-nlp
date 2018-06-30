@@ -15,7 +15,7 @@ This framework supports different NLP tasks, such as text classification and seq
 
 To train a bidirectional LSTM on a text classification task:
 
-        $ python train_text_classification.py --model blstm --data ../data/dataset/sample_data/train$
+        $ python train_text_classification.py --model blstm --data ../data/dataset/sample_data/train.tsv
 
 The script can be launched with several flags.  
 There is a set of flags which is related to the training procedure and its common among all network instances.
