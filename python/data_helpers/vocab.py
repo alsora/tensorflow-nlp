@@ -145,7 +145,8 @@ def transform_text(data, word_dict):
 
 def transform_text_y_seq2seq(data, word_dict, summary_max_len):
 
-    y = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict["<unk>"]), d)), data))
+    y = list(map(lambda d: word_tokenize(d), data))
+    y = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict["<unk>"]), d)), y))
     y = list(map(lambda d: d[:(summary_max_len - 1)], y))
     return y
 
