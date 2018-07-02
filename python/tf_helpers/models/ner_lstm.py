@@ -19,6 +19,7 @@ class NER_LSTM(BaseModel):
         self.input_x = tf.placeholder(tf.int32, shape=[None, sequence_length], name="input_x")
         self.input_x_char = tf.placeholder(tf.int32, shape=[None, sequence_length, word_length], name="input_x_char")
         self.input_y = tf.placeholder(tf.int32, shape=[None, sequence_length, num_classes], name="input_y")
+        self.num_classes = num_classes
         self.x_len = tf.reduce_sum(tf.sign(self.input_x), 1)
         # hyper parameters
         self.dropout_keep_prob = tf.placeholder(dtype=tf.float32, shape=[], name="dropout_keep_prob")
@@ -91,8 +92,8 @@ class NER_LSTM(BaseModel):
 
         with tf.name_scope("output"):
 
-            W = tf.get_variable("W", shape=[self.last_output.shape[-1], num_classes], initializer=tf.contrib.layers.xavier_initializer())
-            b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
+            W = tf.get_variable("W", shape=[self.last_output.shape[-1], self.num_classes], initializer=tf.contrib.layers.xavier_initializer())
+            b = tf.Variable(tf.constant(0.1, shape=[self.num_classes]), name="b")
 
             l2_loss += tf.nn.l2_loss(W)
             l2_loss += tf.nn.l2_loss(b)
@@ -100,7 +101,7 @@ class NER_LSTM(BaseModel):
             nsteps = tf.shape(self.last_output)[1]
             output = tf.reshape(self.last_output, [-1,self.last_output.shape[-1]])
             reshape_logits = tf.nn.xw_plus_b(output, W, b,name="reshape_logits")
-            self.logits = tf.reshape(reshape_logits, [-1, nsteps, num_classes],name="logits")
+            self.logits = tf.reshape(reshape_logits, [-1, nsteps, self.num_classes],name="logits")
             self.predictions = tf.argmax(self.logits, -1, output_type=tf.int32, name="predictions")
 
 
@@ -137,9 +138,9 @@ class NER_LSTM(BaseModel):
                 predictions = tf.reshape(self.predictions ,[-1])
 
                 # Compute a per-batch confusion matrix
-                batch_confusion = tf.confusion_matrix(labels=dense_y, predictions=predictions,num_classes=num_classes)
+                batch_confusion = tf.confusion_matrix(labels=dense_y, predictions=predictions,num_classes=self.num_classes)
                 # Create an accumulator variable to hold the counts
-                self.confusion = tf.Variable(tf.zeros([num_classes, num_classes], dtype=tf.int32), name='confusion')
+                self.confusion = tf.Variable(tf.zeros([self.num_classes, self.num_classes], dtype=tf.int32), name='confusion')
                 # Create the update op for doing a "+=" accumulation on the batch
                 self.confusion_update = self.confusion.assign(self.confusion + batch_confusion)
 
