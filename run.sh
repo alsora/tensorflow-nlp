@@ -9,7 +9,7 @@ VERSION=$1
 
 [ -z "$VERSION" ] && { echo "Usage: $0 VERSION"; exit 1; }
 
-echo Using...
+echo Using:
 echo Volume path:$VOL_CONTAINER_PATH \$VOL_CONTAINER_PATH
 echo Base container:$BASE_CONTAINER \$BASE_CONTAINER
 echo Base image:$BASE_NAME \$BASE_NAME

@@ -28,7 +28,7 @@ COPY \
     ./python $HOME/tensorflow-nlp
 
 RUN \
-    cd tensorflow-text/script/ && \
+    cd tensorflow-nlp/script/ && \
     pip install -r requirements.txt && \
     cd -
 
