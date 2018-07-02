@@ -145,4 +145,24 @@ def batch_iter(data_x, data_y, batch_size, num_epochs, shuffle=True):
 
 
 
+def batch_iter_seq2seq(inputs, outputs, batch_size, num_epochs):
+    inputs = np.array(inputs)
+    outputs = np.array(outputs)
 
+    num_batches_per_epoch = (len(inputs) - 1) // batch_size + 1
+    for epoch in range(num_epochs):
+        for batch_num in range(num_batches_per_epoch):
+            start_index = batch_num * batch_size
+            end_index = min((batch_num + 1) * batch_size, len(inputs))
+            yield inputs[start_index:end_index], outputs[start_index:end_index]
+
+
+
+def load_seq2seq(x_filepath, y_filepath):
+    with open(x_filepath, "r") as f:
+        article_list = list(map(lambda x: clean_str(x), f.readlines()))
+
+    with open(y_filepath, "r") as f:
+        title_list = list(map(lambda x: clean_str(x), f.readlines()))
+
+    return article_list, title_list

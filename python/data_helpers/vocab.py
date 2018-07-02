@@ -9,12 +9,20 @@ import sys
 import re
 import operator
 import collections
+from nltk.tokenize import word_tokenize
+import re
+import pickle
+
 
 PADDING_ = "<padding>"
 UNK_ = "<unk>"
+SOL_ = "<s>"
+EOL_ = "</s>"
+
+DEFAULT_TOKENS_DICT =  {"seq2seq" : [ PADDING_, UNK_,SOL_,EOL_], "sequence_tagging" : [ PADDING_, UNK_], "text_classification" : [ PADDING_, UNK_]}
 
 
-def build_dict_words(sentences, output_dir = None, threshold_count = 1):
+def build_dict_words(sentences, task_type, output_dir = None, threshold_count = 1):
 
     words = list()
     for sentence in sentences:
@@ -23,8 +31,10 @@ def build_dict_words(sentences, output_dir = None, threshold_count = 1):
 
     word_counter = collections.Counter(words).most_common()
     word_dict = dict()
-    word_dict[PADDING_] = 0
-    word_dict[UNK_] = 1
+
+    for t in DEFAULT_TOKENS_DICT[task_type]:
+        word_dict[t] = len(word_dict)
+
     for word, count in word_counter:
         if count >= threshold_count:
             word_dict[word] = len(word_dict)
@@ -127,8 +137,17 @@ def transform_text(data, word_dict):
     x = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict[UNK_]), d.split(" "))), data))
     x = list(map(lambda d: d[:max_element_length], x))
     x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[PADDING_]], x))
+    return x, max_element_length
 
-    return x
+
+
+
+
+def transform_text_y_seq2seq(data, word_dict, summary_max_len):
+
+    y = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict["<unk>"]), d)), data))
+    y = list(map(lambda d: d[:(summary_max_len - 1)], y))
+    return y
 
 
 def transform_labels(labels, labels_dict):
@@ -170,3 +189,9 @@ def transform_sequence_labels(labels, labels_dict):
 
 
     return y
+
+
+
+
+
+
