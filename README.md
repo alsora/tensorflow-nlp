@@ -16,15 +16,12 @@ If you want to install the Framework using Docker, skip this section.
 
 ### Installation
 
-  - Install basic requirements
+  - Install requirements
   
         $ sudo apt-get install python3-pip python3-dev
-  - Install Tensorflow latest version
-  
         $ pip3 install tensorflow
-  - Install additional requirements
-  
         $ cd python/script/ && pip3 install -r requirements.txt
+
   - Validate installation
 
         $ python3
@@ -36,8 +33,7 @@ If you want to install the Framework using Docker, skip this section.
         >>> print(sess.run(hello))
 
 
-
-### Docker installation
+##### Docker installation
 
 The only requirement in this case is to have [Docker](https://docs.docker.com/install/) installed  on the host machine.
 
@@ -52,21 +48,6 @@ The repository contains some useful scripts to simplify the creation of a Docker
   - Deploy a Docker container
   
         $ bash run.sh $VERSION
-
-
-### Usage:
-
-This framework allows to easily create Neural Networks model and train/test them on a variety of Natural Language Processing tasks.
-
-To check if everything is working fine, it's possible to perform the train of a neural network for a sentiment classification task on the provided sample_data.
-
-        $ cd python
-        $ python train.py 
-
-It's possible to see all the available flags using 
-
-        $ python train.py --h
-
 
 
 ## Java:
@@ -107,6 +88,30 @@ Follow these steps to install Tensorflow.js
         $ cd lib/tests/lstm
         $ node index.js
 
+
+## Supported tasks:
+
+### Text Classification
+
+
+##### Dataset
+
+  - Twitter Sentiment Classification (2 classes, 1.2M train/0.4M test) [link](https://drive.google.com/file/d/1aMt-6OCN_mEDlmRX4bymk5ZNEatsVXF-/view?usp=sharing)
+
+  - Amazon Reviews for Sentiment Analysis (2 classes, 3.6M train/0.4M test) [link](https://www.kaggle.com/bittlingmayer/amazonreviews#test.ft.txt.bz2)
+
+  - Sentiment140 Twitter Dataset (3 classes, 1.6M) [link](https://www.kaggle.com/kazanova/sentiment140)
+
+  - SemEval-2017 Sentiment Analysis in Twitter (3 classes) [link](http://alt.qcri.org/semeval2017/task4/index.php?id=data-and-tools)
+ 
+### Sequence Tagging
+
+
+##### Dataset
+
+  - CoNLL-2003 Shared Task (4 classes NER, POS) [link](https://github.com/Franck-Dernoncourt/NeuroNER/tree/master/data/conll2003/en)
+
+
 ## Implemented Neural Networks:
 
 
@@ -116,14 +121,15 @@ Follow these steps to install Tensorflow.js
 
   - Convolutional Neural Network for text classification [paper](https://arxiv.org/pdf/1408.5882.pdf).
 
+  - Bidirectional LSTM + Char embedding + CRF [paper](https://arxiv.org/pdf/1603.01354.pdf).
 
 ### TBD:
 
   - Characters LSTM [repo](https://github.com/charlesashby/CharLSTM).
   - C-LSTM [paper](https://arxiv.org/pdf/1511.08630.pdf).
   - Adversarial Classification [repo](https://github.com/dennybritz/models/tree/master/adversarial_text).
-  - Word2vec enhanced with LSTM [repo](https://github.com/chaitjo/lstm-context-embeddings
-).
-
+  - Word2vec enhanced with LSTM [repo](https://github.com/chaitjo/lstm-context-embeddings).
+  - Text summarizer [repo](https://github.com/dongjun-Lee/text-summarization-tensorflow).
+  - Transformer [repo](https://github.com/brightmart/text_classification/tree/master/a07_Transformer).
 
 

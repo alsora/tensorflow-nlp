@@ -7,6 +7,18 @@ import operator
 import collections
 
 
+def is_number(s):
+    """
+    Checks wether the provided string is a number. Accepted: 1 | 1.0 | 1e-3 | 1,0 
+    """
+    s = s.replace(',', '.')
+    try: 
+        float(s)
+        return True
+    except ValueError:
+        return False
+
+
 def clean_str(string):
     """
     Tokenization/string cleaning for all datasets except for SST.
@@ -27,17 +39,6 @@ def clean_str(string):
     string = re.sub(r"\s{2,}", " ", string)
     string = re.sub(r"@[A-Za-z0-9]+", " ", string)  #For Twitter use: remove hashtags
     return string.strip().lower()
-
-
-def adapt_unique_file(single_data_file):
-    examples = list(open(single_data_file, "r").readlines())
-
-    examples = [[s[1:].strip(), s[0]] for s in examples]
-
-    positive_examples= [x for x, y in examples if y == '1']
-    negative_examples = [x for x, y in examples if y == '0']
-
-    return positive_examples, negative_examples
 
 
 def combine_data_files(data_files):
@@ -73,105 +74,63 @@ def load_data_and_labels(data_files, output_dir = None):
 
     return x_text, y_text
 
-def load_data_and_labels_NER(filename, output_dir = None, processing_word = None, processing_tag=None):
-
-    sentences = []
-    labels = []
-    niter = 0
-    with open(filename) as f:
-        words, tags = [], []
-        for line in f:
-            line = line.strip()
-            if (len(line) == 0 or line.startswith("-DOCSTART-")):
-                if len(words) != 0:
-                    niter += 1
-                    sentences.append(words)
-                    labels.append(tags)
-                    words = []
-                    tags = []
-            else:
-                ls = line.split(' ')
-                word, tag = ls[0], ls[-1]
-                if processing_word is not None:
-                    word = processing_word(word)
-                if processing_tag is not None:
-                    tag = processing_tag(tag)
-                words += [word]
-                tags += [tag]
-
-        # count distinct labels
-        distinct_labels = set()
-        for line in labels:
-            for tag in line:
-                distinct_labels.add(tag)
+def load_sequence_data_and_labels(data_files, output_dir = None):
 
 
-        if 'O' not in distinct_labels:
-            distinct_labels.add('O')
-
-        num_labels = len(distinct_labels)
-
-
-        dict_labels = {}
-        for i, label in enumerate(distinct_labels):
-            dict_labels[label] = i
-
-        y = []
-        for label in labels:
-            single_line_labels = []
-            for l in label:
-                one_hot_vect = [0] * num_labels
-                one_hot_vect[dict_labels[l]] = 1
-                single_line_labels.append(one_hot_vect)
-
-            y.append(single_line_labels)
-
-        if output_dir:
-            output_file = os.path.join(output_dir, "vocab_labels")
-            with open(output_file, 'w') as fp:
-                json.dump(dict_labels, fp)
-
-        return sentences, y , dict_labels
+    # Load data from files
+    if len(data_files) > 1:
+        examples = combine_data_files(data_files=data_files)
+    elif len(data_files) == 1:
+        examples = list(open(data_files[0], "r").readlines())
+    else:
+        examples = []
 
 
-
-def batch_iter(data, batch_size, num_epochs, shuffle=True):
-    """
-    Generates a batch iterator for a dataset.
-    """
-    data = np.array(data)
-    num_batches_per_epoch = int((len(data)-1)/batch_size) + 1
-    for epoch in range(num_epochs):
-        # Shuffle the data at each epoch
-        if shuffle:
-            shuffle_indices = np.random.permutation(np.arange(len(data)))
-            shuffled_data = data[shuffle_indices]
+    x_text = [] 
+    y_text = []
+    sentence = ''
+    tags = []
+    for line in examples:
+        line = line.strip()
+        if (len(line) == 0 or line.startswith("-DOCSTART-")):
+            sentence = sentence.strip()
+            if sentence:
+                x_text.append(sentence)
+                y_text.append(tags)
+                sentence = ''
+                tags = []
         else:
-            shuffled_data = data
-        for batch_num in range(num_batches_per_epoch):
-            start_index = batch_num * batch_size
-            end_index = min((batch_num + 1) * batch_size, len(data))
-            yield shuffled_data[start_index:end_index]
+            splitted_line = line.split(' ')
+            token = splitted_line[0]
+            tag = splitted_line[-1]
+            sentence += token + ' '
+            tags += [tag]
 
-def batch_iter_NER(data, batch_size, num_epochs, shuffle=True):
+    # not required as the input sequence should be already tokenized
+    #x_text = [clean_str(sent) for sent in x_text]
+
+    return x_text, y_text
+
+
+
+
+
+def batch_iter(data_x, data_y, batch_size, num_epochs, shuffle=True):
     """
     Generates a batch iterator for a dataset.
     """
-
-
-    data_x, data_y = zip(*data)
 
     data_x = np.array(data_x)
     data_y = np.array(data_y)
-
     assert len(data_x) == len(data_y)
 
-    num_batches_per_epoch = int((len(data)-1)/batch_size) + 1
+    len_data = len(data_y)
 
+    num_batches_per_epoch = int(len_data/batch_size) + 1
     for epoch in range(num_epochs):
         # Shuffle the data at each epoch
         if shuffle:
-            shuffle_indices = np.random.permutation(np.arange(len(data)))
+            shuffle_indices = np.random.permutation(np.arange(len_data))
             shuffled_data_x = data_x[shuffle_indices]
             shuffled_data_y = data_y[shuffle_indices]
         else:
@@ -180,7 +139,7 @@ def batch_iter_NER(data, batch_size, num_epochs, shuffle=True):
 
         for batch_num in range(num_batches_per_epoch):
             start_index = batch_num * batch_size
-            end_index = min((batch_num + 1) * batch_size, len(data))
+            end_index = min((batch_num + 1) * batch_size, len_data)
 
             yield list(zip(shuffled_data_x[start_index:end_index], shuffled_data_y[start_index:end_index]))
 
