@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import tensorflow as tf
 import data_helpers.load as load_utils
 from logger_utils import get_logger
@@ -14,11 +15,13 @@ class BaseModel(object):
         self.saver = None
 
 
-
     def initialize_session(self):
         """Defines self.sess and initialize the variables"""
         self.logger.info("Initializing tf session")
-        self.session = tf.Session()
+        session_conf = tf.ConfigProto(
+            allow_soft_placement=self.FLAGS.allow_soft_placement,
+            log_device_placement=self.FLAGS.log_device_placement)
+        self.session = tf.Session(config=session_conf)
         self.session.run(tf.global_variables_initializer())
         self.saver = tf.train.Saver(tf.global_variables(), max_to_keep=self.FLAGS.num_checkpoints)
 
@@ -45,10 +48,10 @@ class BaseModel(object):
         self.saver.save(self.session, checkpoint_prefix, global_step=current_step)
         print("Saved model checkpoint to {}\n".format(path))
 
+
     def close_session(self):
         """Closes the session"""
         self.session.close()
-
 
 
     def initialize_summaries(self):
@@ -56,7 +59,6 @@ class BaseModel(object):
         Args:
             output_dir: (string) where the results are written
         """
-        
         # Summaries: gradient values, loss and accuracy
         grad_summaries = []
         for g, v in self.grads_and_vars:
@@ -82,8 +84,6 @@ class BaseModel(object):
         self.valid_summary_writer = tf.summary.FileWriter(valid_summary_dir, self.session.graph)
 
 
-
-
     def add_summary(self):
         """Defines variables for Tensorboard
         Args:
@@ -91,9 +91,6 @@ class BaseModel(object):
         """
         merged = tf.summary.merge_all()
         self.file_writer = tf.summary.FileWriter(self.FLAGS.output_dir, self.session.graph)
-
-
-
 
 
     def train_step(self, x_train_batch, y_train_batch):
@@ -106,7 +103,6 @@ class BaseModel(object):
         self.dropout_keep_prob: self.FLAGS.dropout_keep_prob
         }
 
-
         if self.FLAGS.summary:
             _, step, summaries, loss, accuracy = self.session.run(
                 [self.optimizer, self.global_step, self.train_summary_op, self.loss, self.accuracy],feed_dict)
@@ -116,29 +112,19 @@ class BaseModel(object):
             _, step, loss = self.session.run(
                 [self.optimizer, self.global_step, self.loss],feed_dict)
 
-        if (step + 1) % 10 == 0:
-            #epoch = ( step // num_batches_per_epoch) + 1
-            #relative_step = (step % num_batches_per_epoch) + 1
-            #time_str = datetime.datetime.now().isoformat()
-            #print("{}: epoch {}/{}, step {}/{}, loss {:g}".format(time_str, epoch, FLAGS.num_epochs, relative_step, num_batches_per_epoch, loss))
-            print("step---------->")
-
-
-
+        return loss
 
 
     def valid_step(self, x_valid, y_valid):
         """
         Evaluates model on a validation set
         """
-
-        print("\nEvaluation:")
         batch_size = self.FLAGS.batch_size
-        valid_batches = load_utils.batch_iter(list(zip(x_valid, y_valid)), batch_size, 1)
+        valid_batches = load_utils.batch_iter(x_valid, y_valid, batch_size, 1)
         num_valid_batches = (len(x_valid) - 1) // batch_size + 1
 
         sum_accuracy = 0
-        model.confusion.load(np.zeros([num_classes,num_classes]))
+        self.confusion.load(np.zeros([self.num_classes,self.num_classes]), self.session)
         for valid_batch in valid_batches:
             x_valid_batch, y_valid_batch = zip(*valid_batch)
 
@@ -148,7 +134,7 @@ class BaseModel(object):
                 self.dropout_keep_prob: 1.0
             }
 
-            if FLAGS.summary:
+            if self.FLAGS.summary:
                 step, summaries, loss, accuracy, cnf_matrix = self.session.run(
                     [self.global_step, self.dev_summary_op, self.loss, self.accuracy, self.confusion_update], feed_dict)
 
@@ -161,9 +147,4 @@ class BaseModel(object):
 
         valid_accuracy = sum_accuracy / num_valid_batches
 
-        time_str = datetime.datetime.now().isoformat()
-        print("{}: step {}, valid_accuracy {:g}".format(time_str, step, valid_accuracy))
-        print("Confusion matrix:")
-        print(cnf_matrix)
-
-        return valid_accuracy
+        return valid_accuracy, cnf_matrix

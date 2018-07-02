@@ -1,9 +1,10 @@
 import tensorflow as tf
 from tensorflow.contrib import rnn
 from tf_helpers.layer_utils import *
+from base_model import BaseModel
 
 
-class AttentionRNN(object):
+class AttentionRNN(BaseModel):
     """
     A Bidirection LSTM with attention for text classification.
     Uses an embedding layer, followed by bLSTM layers, attention layer and softmax layer.
@@ -11,10 +12,13 @@ class AttentionRNN(object):
     def __init__(
         self, reversed_dict, sequence_length, num_classes, FLAGS):
 
+        super(AttentionRNN, self).__init__(FLAGS)
+
         # Placeholders for input, output and dropout
         self.input_x = tf.placeholder(tf.int32, [None, sequence_length], name="input_x")
         self.input_y = tf.placeholder(tf.int32, [None, num_classes], name="input_y")
         self.x_len = tf.reduce_sum(tf.sign(self.input_x), 1)
+        self.num_classes = num_classes
         self.dropout_keep_prob = tf.placeholder(tf.float32, [], name="dropout_keep_prob")
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
         self.learning_rate = FLAGS.learning_rate
@@ -52,10 +56,10 @@ class AttentionRNN(object):
                 axis=-1)
 
         with tf.name_scope("output"):
-            #self.logits = tf.contrib.slim.fully_connected(self.attention_out, num_classes, activation_fn=None)
+            #self.logits = tf.contrib.slim.fully_connected(self.attention_out, self.num_classes, activation_fn=None)
 
-            W = tf.get_variable("W", shape=[self.attention_out.shape[1], num_classes], initializer=tf.contrib.layers.xavier_initializer())
-            b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
+            W = tf.get_variable("W", shape=[self.attention_out.shape[1], self.num_classes], initializer=tf.contrib.layers.xavier_initializer())
+            b = tf.Variable(tf.constant(0.1, shape=[self.num_classes]), name="b")
 
             l2_loss += tf.nn.l2_loss(W)
             l2_loss += tf.nn.l2_loss(b)
@@ -81,8 +85,8 @@ class AttentionRNN(object):
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
 
             # Compute a per-batch confusion matrix
-            batch_confusion = tf.confusion_matrix(labels=dense_y, predictions=self.predictions, num_classes=num_classes)
+            batch_confusion = tf.confusion_matrix(labels=dense_y, predictions=self.predictions, num_classes=self.num_classes)
             # Create an accumulator variable to hold the counts
-            self.confusion = tf.Variable( tf.zeros([num_classes,num_classes], dtype=tf.int32 ), name='confusion' )
+            self.confusion = tf.Variable( tf.zeros([self.num_classes,self.num_classes], dtype=tf.int32 ), name='confusion' )
             # Create the update op for doing a "+=" accumulation on the batch
             self.confusion_update = self.confusion.assign( self.confusion + batch_confusion )

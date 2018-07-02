@@ -1,9 +1,10 @@
 import tensorflow as tf
 from tensorflow.contrib import rnn
 from tf_helpers.layer_utils import *
+from base_model import BaseModel
 
 
-class NER_LSTM(object):
+class NER_LSTM(BaseModel):
     """
     A LSTM + CRF for NER.
     Uses an embedding layer, followed by bLSTM and NER.
@@ -11,10 +12,10 @@ class NER_LSTM(object):
     #self, reversed_dict, sequence_length, num_classes, FLAGS):
     def __init__( self, reversed_dict, sequence_length, word_length, num_classes, FLAGS):
 
+        super(NER_LSTM, self).__init__(FLAGS)
 
-        """Define placeholders = entries to computational graph"""
 
-        # shape = (batch size, max length of sentence in batch)
+        # Placeholders for input, output and dropout
         self.input_x = tf.placeholder(tf.int32, shape=[None, sequence_length], name="input_x")
         self.input_x_char = tf.placeholder(tf.int32, shape=[None, sequence_length, word_length], name="input_x_char")
         self.input_y = tf.placeholder(tf.int32, shape=[None, sequence_length, num_classes], name="input_y")

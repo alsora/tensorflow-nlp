@@ -90,10 +90,17 @@ def preprocess():
     y = np.array(y)
 
     # Randomly shuffle data
-    sss = StratifiedShuffleSplit(n_splits=1, test_size=FLAGS.dev_sample_percentage, random_state=None)
-    for train_index, valid_index in sss.split(x, y):
-        x_train, x_valid =  x[train_index], x[valid_index]
-        y_train, y_valid = y[train_index], y[valid_index]
+    np.random.seed(10)
+    shuffle_indices = np.random.permutation(np.arange(len(y)))
+    x_shuffled = x[shuffle_indices]
+    y_shuffled = y[shuffle_indices]
+
+    # Split train/test set
+    # TODO: This is very crude, should use cross-validation
+    dev_sample_index = -1 * int(FLAGS.dev_sample_percentage * float(len(y)))
+    x_train, x_valid = x_shuffled[:dev_sample_index], x_shuffled[dev_sample_index:]
+    y_train, y_valid = y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
+
 
     del x, y
 
@@ -109,157 +116,60 @@ def train(x_train, y_train, word_dict, reversed_dict, labels_dict, x_valid, y_va
     # Training
     # ==================================================
 
-
     sequence_length = x_train.shape[1]
     num_classes = y_train.shape[-1]
 
-    with tf.Graph().as_default():
-        session_conf = tf.ConfigProto(
-            allow_soft_placement=FLAGS.allow_soft_placement,
-            log_device_placement=FLAGS.log_device_placement)
-        sess = tf.Session(config=session_conf)
-        with sess.as_default():
 
-            if (FLAGS.model == "ner_lstm"):
-                model = ner_lstm.NER_LSTM(
-                    reversed_dict=reversed_dict,
-                    sequence_length=sequence_length,
-                    word_length=0,
-                    num_classes=num_classes,
-                    FLAGS=FLAGS)
-            else:
-                raise NotImplementedError()
-
-            # Keep track of gradient values and sparsity (optional)
-            grad_summaries = []
-            for g, v in model.grads_and_vars:
-                if g is not None:
-                    grad_hist_summary = tf.summary.histogram("{}/grad/hist".format(v.name), g)
-                    sparsity_summary = tf.summary.scalar("{}/grad/sparsity".format(v.name), tf.nn.zero_fraction(g))
-                    grad_summaries.append(grad_hist_summary)
-                    grad_summaries.append(sparsity_summary)
-            grad_summaries_merged = tf.summary.merge(grad_summaries)
-
-            # Output directory for models and summaries
-            print("Writing to {}\n".format(FLAGS.output_dir))
-
-            # Summaries for loss and accuracy
-            loss_summary = tf.summary.scalar("loss", model.loss)
-            acc_summary = tf.summary.scalar("accuracy", model.accuracy)
-
-            # Train Summaries
-            train_summary_op = tf.summary.merge([loss_summary, acc_summary, grad_summaries_merged])
-            train_summary_dir = os.path.join(FLAGS.output_dir, "summaries", "train")
-            train_summary_writer = tf.summary.FileWriter(train_summary_dir, sess.graph)
-
-            # Dev summaries
-            dev_summary_op = tf.summary.merge([loss_summary, acc_summary])
-            dev_summary_dir = os.path.join(FLAGS.output_dir, "summaries", "dev")
-            dev_summary_writer = tf.summary.FileWriter(dev_summary_dir, sess.graph)
-
-            # Checkpoint directory. Tensorflow assumes this directory already exists so we need to create it
-            checkpoint_dir = os.path.abspath(os.path.join(FLAGS.output_dir, "checkpoints"))
-            checkpoint_prefix = os.path.join(checkpoint_dir, "model")
-            if not os.path.exists(checkpoint_dir):
-                os.makedirs(checkpoint_dir)
-            saver = tf.train.Saver(tf.global_variables(), max_to_keep=FLAGS.num_checkpoints)
-
-            # Initialize all variables
-            sess.run(tf.global_variables_initializer())
-
-            # Generate batches
-            train_batches = load_utils.batch_iter(x_train, y_train, FLAGS.batch_size, FLAGS.num_epochs)
-            num_batches_per_epoch = (len(x_train) - 1) // FLAGS.batch_size + 1
-
-            def train_step(x_train_batch, y_train_batch):
-                """
-                A single training step
-                """
-                feed_dict = {
-                    model.input_x: x_train_batch,
-                    model.input_y: y_train_batch,
-                    model.dropout_keep_prob: FLAGS.dropout_keep_prob
-                }
-
-                if FLAGS.summary:
-                    _, step, summaries, loss, accuracy = sess.run(
-                        [model.optimizer, model.global_step, train_summary_op, model.loss, model.accuracy], feed_dict)
-
-                    train_summary_writer.add_summary(summaries, step)
-                else:
-                    _, step, loss = sess.run(
-                        [model.optimizer, model.global_step, model.loss], feed_dict)
-
-                if (step + 1) % 10 == 0:
-                    epoch = (step // num_batches_per_epoch) + 1
-                    relative_step = (step % num_batches_per_epoch) + 1
-                    time_str = datetime.datetime.now().isoformat()
-                    print("{}: epoch {}/{}, step {}/{}, loss {:g}".format(time_str, epoch, FLAGS.num_epochs,
-                                                                          relative_step, num_batches_per_epoch, loss))
-
-            def dev_step(x_valid, y_valid, writer=None):
-                """
-                Evaluates model on a validation set
-                """
-                print("\nEvaluation:")
-                batch_size = FLAGS.batch_size
-                valid_batches = load_utils.batch_iter(x_valid, y_valid, batch_size, 1)
-                num_valid_batches = (len(x_valid) - 1) // batch_size + 1
-
-                sum_accuracy = 0
-                model.confusion.load(np.zeros([num_classes, num_classes]))
-                for valid_batch in valid_batches:
-                    x_valid_batch, y_valid_batch = zip(*valid_batch)
-
-                    feed_dict = {
-                        model.input_x: x_valid_batch,
-                        model.input_y: y_valid_batch,
-                        model.dropout_keep_prob: 1.0
-                    }
-
-                    if FLAGS.summary:
-                        step, summaries, loss, accuracy, cnf_matrix = sess.run(
-                            [model.global_step, dev_summary_op, model.loss, model.accuracy, model.confusion_update],
-                            feed_dict)
-                        if writer:
-                            writer.add_summary(summaries, step)
-                    else:
-                        step, loss, accuracy, cnf_matrix = sess.run(
-                            [model.global_step, model.loss, model.accuracy, model.confusion_update], feed_dict)
-
-                    sum_accuracy += accuracy
-
-                valid_accuracy = sum_accuracy / num_valid_batches
-
-                time_str = datetime.datetime.now().isoformat()
-                print("{}: step {}, valid_accuracy {:g}".format(time_str, step, valid_accuracy))
-                print("Confusion matrix:")
-                print(cnf_matrix)
-
-                return valid_accuracy
+    if (FLAGS.model == "ner_lstm"):
+        model = ner_lstm.NER_LSTM(
+            reversed_dict=reversed_dict,
+            sequence_length=sequence_length,
+            word_length=0,
+            num_classes=num_classes,
+            FLAGS=FLAGS)
+    else:
+        raise NotImplementedError()
 
 
-            max_accuracy = 0
-            # Training loop. For each batch...
-            for train_batch in train_batches:
-                x_train_batch, y_train_batch = zip(*train_batch)
-                train_step(x_train_batch, y_train_batch)
-                current_step = tf.train.global_step(sess, model.global_step)
-                if current_step % FLAGS.evaluate_every == 0:
+    model.initialize_session()
 
-                    valid_accuracy = dev_step(x_valid, y_valid, writer=None)
+    model.initialize_summaries()
 
-                    if valid_accuracy > max_accuracy:
-                        max_accuracy = valid_accuracy
-                        path = os.path.join(FLAGS.output_dir, "saved")
-                        saver_utils.save_model(sess, path)
-                        print("Saved model with better accuracy to {}\n".format(path))
-
-                if current_step % FLAGS.checkpoint_every == 0:
-                    path = saver.save(sess, checkpoint_prefix, global_step=current_step)
-                    print("Saved model checkpoint to {}\n".format(path))
+    # Generate batches
+    train_batches = load_utils.batch_iter(x_train, y_train, FLAGS.batch_size, FLAGS.num_epochs)
+    num_batches_per_epoch = (len(x_train) - 1) // FLAGS.batch_size + 1
 
 
+    max_accuracy = 0
+    # Training loop. For each batch...
+    for train_batch in train_batches:
+        x_train_batch, y_train_batch = zip(*train_batch)
+        loss = model.train_step(x_train_batch, y_train_batch)
+        current_step = tf.train.global_step(model.session, model.global_step)
+
+        if (current_step + 1) % 10 == 0:
+            epoch = ( current_step // num_batches_per_epoch) + 1
+            relative_step = (current_step % num_batches_per_epoch) + 1
+            time_str = datetime.datetime.now().isoformat()
+            print("{}: epoch {}/{}, step {}/{}, loss {:g}".format(time_str, epoch, FLAGS.num_epochs, relative_step, num_batches_per_epoch, loss))
+
+        if current_step % FLAGS.evaluate_every == 0:
+
+            valid_accuracy, cnf_matrix = model.valid_step(x_valid, y_valid)
+            time_str = datetime.datetime.now().isoformat()
+            print("Evaluation:")
+            print("{}: valid_accuracy {:g}".format(time_str, valid_accuracy))
+            print("Confusion matrix:")
+            print(cnf_matrix)
+        
+            if valid_accuracy > max_accuracy:
+                max_accuracy = valid_accuracy
+                path = os.path.join(FLAGS.output_dir, "saved")
+                saver_utils.save_model(model.session, path)
+                print("Saved model with better accuracy to {}\n".format(path))
+
+        if current_step % FLAGS.checkpoint_every == 0:
+            model.save_session()
 
 
 

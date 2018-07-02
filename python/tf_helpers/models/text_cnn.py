@@ -1,9 +1,10 @@
 import tensorflow as tf
 import numpy as np
 from tf_helpers.layer_utils import *
+from base_model import BaseModel
 
 
-class TextCNN(object):
+class TextCNN(BaseModel):
     """
     A CNN for text classification.
     Uses an embedding layer, followed by a convolutional, max-pooling and softmax layer.
@@ -11,9 +12,12 @@ class TextCNN(object):
     def __init__(
       self, reversed_dict, sequence_length, num_classes, FLAGS):
 
+        super(TextCNN, self).__init__(FLAGS)
+
         # Placeholders for input, output and dropout
         self.input_x = tf.placeholder(tf.int32, [None, sequence_length], name="input_x")
         self.input_y = tf.placeholder(tf.int32, [None, num_classes], name="input_y")
+        self.num_classes = num_classes
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
         self.learning_rate = FLAGS.learning_rate
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
@@ -67,9 +71,9 @@ class TextCNN(object):
         with tf.name_scope("output"):
             W = tf.get_variable(
                 "W",
-                shape=[num_filters_total, num_classes],
+                shape=[num_filters_total, self.num_classes],
                 initializer=tf.contrib.layers.xavier_initializer())
-            b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
+            b = tf.Variable(tf.constant(0.1, shape=[self.num_classes]), name="b")
             l2_loss += tf.nn.l2_loss(W)
             l2_loss += tf.nn.l2_loss(b)
             self.logits = tf.nn.xw_plus_b(self.h_drop, W, b, name="logits")
@@ -95,8 +99,8 @@ class TextCNN(object):
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
 
             # Compute a per-batch confusion matrix
-            batch_confusion = tf.confusion_matrix(labels=dense_y, predictions=self.predictions, num_classes=num_classes)
+            batch_confusion = tf.confusion_matrix(labels=dense_y, predictions=self.predictions, num_classes=self.num_classes)
             # Create an accumulator variable to hold the counts
-            self.confusion = tf.Variable( tf.zeros([num_classes,num_classes], dtype=tf.int32 ), name='confusion' )
+            self.confusion = tf.Variable( tf.zeros([self.num_classes,self.num_classes], dtype=tf.int32 ), name='confusion' )
             # Create the update op for doing a "+=" accumulation on the batch
             self.confusion_update = self.confusion.assign( self.confusion + batch_confusion )
