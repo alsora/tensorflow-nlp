@@ -1,4 +1,4 @@
-# tensorflow-text
+# tensorflow-NLP
 
 This repository implements a Tensorflow framework for performing Text Classification and Natural Language Processing (NLP) tasks.
 This repository contains scripts and libraries for different programming languages.
@@ -10,11 +10,9 @@ This repository contains scripts and libraries for different programming languag
   - Node.js for loading pretrained network models, performing test and inference.
 
 
-## Python:
+## Python installation:
 The Python implementation of this framework is provided with a Dockerfile, in order to be easily used on servers or other machines.
-If you want to install the Framework using Docker, skip this section.
-
-### Installation
+If you want to install the framework using Docker, skip the following steps and go to the next sub section.
 
   - Install requirements
   
@@ -38,29 +36,25 @@ If you want to install the Framework using Docker, skip this section.
 The only requirement in this case is to have [Docker](https://docs.docker.com/install/) installed  on the host machine.
 
 The repository contains some useful scripts to simplify the creation of a Docker image and the deployment of a Docker container.
-
-  - Export some environment variables
+We are going to export some environment variable, build the Docker image and then run a Docker container for this image.
   
-        $ source env.sh
-  - Build a Docker image
-  
-        $ bash build.sh
-  - Deploy a Docker container
-  
+        $ source env.sh  
+        $ bash build.sh  
         $ bash run.sh $VERSION
 
+Note that also an alternative run script is provided. This can be used instead of "run.sh" and will create a volume for all the Python directory into the Docker container. This allows to easily modify the code using your preferred editor from the host pc.
+Be careful that this implies also that EVERY CHANGE TO THE CODE OR TO THE REPOSITORY THAT YOU PERFORM FROM INSIDE THE CONTAINER WILL REFLECT ON THE FILES ON THE HOST!!!
 
-## Java:
+        $ bash run_dev.sh $VERSION
 
+## Java installation:
 
-### Installation
-
-Follow these steps to install the Java bindings for Tensorflow.
+Follow these steps to install the Java bindings for Tensorflow and exploit the provided Java library.
 
   - Download the .jar file and the Java Native Interface (JNI).
   
         $ cd java
-        $ bash script/jni.sh
+        $ bash script/download_tensorflow.sh
 
   - In your preferred IDE, add the .jar file to the Java project build path and link to it the native libraries contained in the jni folder.
   Then you can validate the installation by running the HelloTF.java example.
@@ -116,12 +110,10 @@ Follow these steps to install Tensorflow.js
 
 
   - Bidirectional LSTM [paper](https://link.springer.com/chapter/10.1007/978-3-319-39958-4_19).
-
   - Bidirectional LSTM + attention [paper](http://www.aclweb.org/anthology/P16-2034).
-
-  - Convolutional Neural Network for text classification [paper](https://arxiv.org/pdf/1408.5882.pdf).
-
   - Bidirectional LSTM + Char embedding + CRF [paper](https://arxiv.org/pdf/1603.01354.pdf).
+  - CNN for text classification [paper](https://arxiv.org/pdf/1408.5882.pdf).
+
 
 ### TBD:
 

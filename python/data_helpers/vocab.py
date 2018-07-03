@@ -19,8 +19,16 @@ UNK_ = "<unk>"
 SOL_ = "<s>"
 EOL_ = "</s>"
 
-DEFAULT_TOKENS_DICT =  {"seq2seq" : [ PADDING_, UNK_,SOL_,EOL_], "sequence_tagging" : [ PADDING_, UNK_], "text_classification" : [ PADDING_, UNK_]}
+DEFAULT_TOKENS_DICT =  {"seq2seq" : [ PADDING_, UNK_,SOL_,EOL_],
+                        "sequence_tagging" : [ PADDING_, UNK_],
+                        "text_classification" : [ PADDING_, UNK_]}
 
+
+def reverse_dict(my_dict):
+
+    reversed_dict = dict(zip(my_dict.values(), my_dict.keys()))
+
+    return reversed_dict
 
 def build_dict_words(sentences, task_type, output_dir = None, threshold_count = 1):
 
@@ -129,6 +137,37 @@ def load_reverse_dict(path):
     return dict_
 
 
+
+
+def transform_text2(data, dict_, tokenize = True, crop = -1, pad = True):
+
+    x = data
+
+    if tokenize:
+        x = list(map(lambda d: word_tokenize(d), x))
+
+    x = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict[UNK_]), d.split(" "))), data))
+
+    if crop != 0:
+        if crop == -1:
+            max_element_length = max([len(r) for r in x])
+        else:  
+            max_element_length = crop
+        
+        x = list(map(lambda d: d[:max_element_length], x))
+
+        if pad:
+            x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[PADDING_]], x))
+
+    
+   
+    return x
+
+
+
+
+
+
 def transform_text(data, word_dict):
 
     max_element_length = max([len(x.split(" ")) for x in data])
@@ -138,8 +177,6 @@ def transform_text(data, word_dict):
     x = list(map(lambda d: d[:max_element_length], x))
     x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[PADDING_]], x))
     return x
-
-
 
 
 

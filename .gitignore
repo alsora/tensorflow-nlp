@@ -4,6 +4,7 @@
 /data/dataset/*
 !/data/dataset/sample_text_classification
 !/data/dataset/sample_sequence_tagging
+!/data/dataset/sample_seq2seq
 !/data/embedding
 /data/embedding/*
 !/data/embedding/download_glove.py

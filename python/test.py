@@ -6,7 +6,7 @@ import os
 import time
 import datetime
 import data_helpers
-from text_cnn import TextCNN
+from tf_helpers.models import base_model
 from tensorflow.contrib import learn
 import data_helpers.load as load_utils
 import data_helpers.vocab as vocab_utils
@@ -18,11 +18,10 @@ import csv
 # Data Parameters
 tf.flags.DEFINE_string("data", "../data/dataset/sample_data/test.tsv", "Data source tab separated files. It's possible to provide more than 1 file using a comma")
 tf.flags.DEFINE_string("it", "", "Interactive mode for evaluating sentences from command line")
+tf.flags.DEFINE_string("model_dir", "", "Directory containing a trained model, i.e. checkpoints, saved, vocab_words")
 
 # Eval Parameters
 tf.flags.DEFINE_integer("batch_size", 64, "Batch Size (default: 64)")
-tf.flags.DEFINE_string("checkpoint_dir", "", "Checkpoint directory from training run")
-tf.flags.DEFINE_boolean("eval_train", False, "Evaluate on all training data")
 
 # Misc Parameters
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
@@ -30,14 +29,20 @@ tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on 
 
 
 FLAGS = tf.flags.FLAGS
-FLAGS._parse_flags()
-print("\nParameters:")
-for attr, value in sorted(FLAGS.__flags.items()):
-    print("{}={}".format(attr.upper(), value))
-print("")
 
 
-def evaluate():
+
+def loadModel():
+
+    model = base_model.BaseModel(FLAGS)
+    model.initialize_session()
+    model.restore_saved_model(FLAGS.model_dir)
+
+    return model
+
+
+
+def evaluate(model):
     '''
     # CHANGE THIS: Load data. Load your own data here
     if FLAGS.eval_train:
@@ -70,8 +75,8 @@ def evaluate():
     y = [1, 0]
 
     # Map data into vocabulary
-    dict_path = os.path.join(FLAGS.checkpoint_dir, "..", "vocab_words")
-    word_dict, _ = vocab_utils.load_dict(x_text, FLAGS.output_dir)
+    words_dict_path = os.path.join(FLAGS.model_dir, "vocab_words")
+    word_dict = vocab_utils.load_dict(words_dict_path)
 
     x = vocab_utils.transform_text(x_text, word_dict)
 
@@ -96,8 +101,6 @@ def evaluate():
 
             # Get the placeholders from the graph by name
             input_x = graph.get_operation_by_name("input_x").outputs[0]
-            # input_y = graph.get_operation_by_name("input_y").outputs[0]
-            dropout_keep_prob = graph.get_operation_by_name("dropout_keep_prob").outputs[0]
 
             # Tensors we want to evaluate
             predictions = graph.get_operation_by_name("output/predictions").outputs[0]
@@ -132,11 +135,16 @@ def interactive(model):
     Args:
         model: instance of network model
     """
-    model.logger.info("""
-        This is an interactive mode.
-        To exit, enter 'exit'.
-        You can enter a text like
-        input> I love Paris""")
+    model.logger.info("""This is an interactive mode.
+    To exit, enter 'exit'.
+    You can enter a text like
+    input> I love Paris""")
+
+    words_dict_path = os.path.join(FLAGS.model_dir, "vocab_words")
+    labels_dict_path = os.path.join(FLAGS.model_dir, "vocab_labels")
+
+    word_dict = vocab_utils.load_dict(words_dict_path)
+    reversed_labels_dict = vocab_utils.load_reverse_dict(labels_dict_path)
 
     while True:
         try:
@@ -146,12 +154,24 @@ def interactive(model):
             # for python 3
             text = input("input> ")
 
-        tokens = text.strip().split(" ")
+        tokens = text.strip()
 
         if tokens == ["exit"]:
             break
 
-        preds = model.predict(tokens)
+        PADDING_ = "<padding>"
+        UNK_ = "<unk>"
+
+        data = [tokens]
+        max_element_length = 119
+
+        x = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict[UNK_]), d.split(" "))), data))
+        x = list(map(lambda d: d[:max_element_length], x))
+        x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[PADDING_]], x))
+
+        preds_ids = model.predict_step(x)
+        preds = [reversed_labels_dict[idx] for idx in list(pred_ids[0])]
+
         to_print = align_data({"input": tokens, "output": preds})
 
         for key, seq in to_print.items():
@@ -159,15 +179,18 @@ def interactive(model):
 
 
 
+
 def main(argv=None):
 
 
-
+    model = loadModel()
 
     if FLAGS.it:
-        interactive()
+        interactive(model)
     else:
-        evaluate()
+        evaluate(model)
+
+
 
 if __name__ == '__main__':
     tf.app.run()

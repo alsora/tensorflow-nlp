@@ -23,7 +23,7 @@ class BaseModel(object):
             log_device_placement=self.FLAGS.log_device_placement)
         self.session = tf.Session(config=session_conf)
         self.session.run(tf.global_variables_initializer())
-        self.saver = tf.train.Saver(tf.global_variables(), max_to_keep=self.FLAGS.num_checkpoints)
+        #self.saver = tf.train.Saver(tf.global_variables(), max_to_keep=self.FLAGS.num_checkpoints)
 
 
     def restore_session(self, dir_model):
@@ -34,6 +34,15 @@ class BaseModel(object):
         """
         self.logger.info("Reloading the latest trained model...")
         self.saver.restore(self.session, dir_model)
+
+
+    def restore_saved_model(self, model_dir, tag = [tf.saved_model.tag_constants.SERVING]):
+
+        saved_model_dir = os.path.join(model_dir, "saved")
+        
+        tf.saved_model.loader.load(self.session, tag, saved_model_dir)
+
+        
 
 
     def save_session(self):
@@ -148,3 +157,22 @@ class BaseModel(object):
         valid_accuracy = sum_accuracy / num_valid_batches
 
         return valid_accuracy, cnf_matrix
+
+
+    def predict_step(self, x):
+        """
+        Predict labels for data x 
+        """
+
+        input_placeholder = tf.get_default_graph().get_tensor_by_name('input_x:0')
+        dropout_placeholder = tf.get_default_graph().get_tensor_by_name('dropout_keep_prob:0')
+        predictions_tensor = tf.get_default_graph().get_tensor_by_name('output/predictions:0')
+
+        feed_dict = {
+            input_placeholder: x,
+            dropout_placeholder: 1.0
+        }
+
+        predictions = self.session.run([predictions_tensor], feed_dict)
+
+        return predictions
