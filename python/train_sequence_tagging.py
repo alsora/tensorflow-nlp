@@ -39,6 +39,7 @@ tf.flags.DEFINE_float("l2_reg_lambda", 0.0, "L2 regularization lambda (default: 
 tf.flags.DEFINE_boolean("crf", False, "Use CRF classificator (default: True)")
 tf.flags.DEFINE_boolean("embedding_char", False, "Use also embedding char for training (default: False)")
 
+
 # Training parameters
 tf.flags.DEFINE_integer("batch_size", 64, "Batch Size (default: 64)")
 tf.flags.DEFINE_integer("num_epochs", 10, "Number of training epochs (default: 10)")
@@ -80,7 +81,7 @@ def preprocess():
     # Build vocabulary
     max_element_length = max([len(e) for e in x_text])
 
-    word_dict, reversed_dict = vocab_utils.build_dict_words(x_text, FLAGS.output_dir)
+    word_dict, reversed_dict = vocab_utils.build_dict_words(x_text, "sequence_tagging", FLAGS.output_dir)
     labels_dict, _ = vocab_utils.build_sequence_dict_labels(y_text, FLAGS.output_dir)
 
     x = vocab_utils.transform_text(x_text, word_dict)

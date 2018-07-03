@@ -131,13 +131,13 @@ def load_reverse_dict(path):
 
 def transform_text(data, word_dict):
 
-    max_element_length = max([len(x.split(" ")) for x in data]) 
+    max_element_length = max([len(x.split(" ")) for x in data])
     # max_element_length = 20
 
     x = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict[UNK_]), d.split(" "))), data))
     x = list(map(lambda d: d[:max_element_length], x))
     x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[PADDING_]], x))
-    return x, max_element_length
+    return x
 
 
 
