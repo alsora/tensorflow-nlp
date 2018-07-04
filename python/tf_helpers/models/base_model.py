@@ -39,7 +39,7 @@ class BaseModel(object):
     def restore_saved_model(self, model_dir, tag = [tf.saved_model.tag_constants.SERVING]):
 
         saved_model_dir = os.path.join(model_dir, "saved")
-        
+
         tf.saved_model.loader.load(self.session, tag, saved_model_dir)
 
         
@@ -164,15 +164,14 @@ class BaseModel(object):
         Predict labels for data x 
         """
 
-        input_placeholder = tf.get_default_graph().get_tensor_by_name('input_x:0')
-        dropout_placeholder = tf.get_default_graph().get_tensor_by_name('dropout_keep_prob:0')
-        predictions_tensor = tf.get_default_graph().get_tensor_by_name('output/predictions:0')
+        input_x = self.session.graph.get_operation_by_name("input_x").outputs[0]
+        dropout_keep_prob = self.session.graph.get_operation_by_name("dropout_keep_prob").outputs[0]
+        predictions = self.session.graph.get_operation_by_name("output/predictions").outputs[0]
 
         feed_dict = {
-            input_placeholder: x,
-            dropout_placeholder: 1.0
+            input_x: x,
+            dropout_keep_prob: 1.0
         }
 
-        predictions = self.session.run([predictions_tensor], feed_dict)
+        return self.session.run([predictions], feed_dict)
 
-        return predictions

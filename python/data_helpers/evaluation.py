@@ -28,8 +28,11 @@ def align_data(data):
     # Text classification task
     elif (len(data['output']) == 1):
 
-        data_aligned['input'] = data['input']
-        data_aligned['output'] = data['output']
+        text = " ".join(str(x) for x in data['input'])
+        classification = " ".join(str(x) for x in data['output'])
+
+        data_aligned['input'] = text
+        data_aligned['output'] = classification
 
     # Sequence2Sequence task
     else:
@@ -38,7 +41,7 @@ def align_data(data):
         data_aligned['output'] = data['output']
 
 
-
-
-
     return data_aligned
+
+
+

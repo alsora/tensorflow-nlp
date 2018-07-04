@@ -6,8 +6,6 @@ import numpy as np
 from tf_helpers.models import seq2seq
 import data_helpers.vocab as vocab_utils
 import data_helpers.load as load_utils
-#from utils import build_dict, build_dataset, batch_iter
-
 
 
 tf.flags.DEFINE_string("model", "seq2seq", "Network model to train: ner_lstm (default: ner_lstm)")
@@ -18,12 +16,9 @@ tf.flags.DEFINE_integer("num_layers",  2, help="Network depth.")
 tf.flags.DEFINE_integer("beam_width",  10, help="Beam width for beam search decoder.")
 tf.flags.DEFINE_string("glove_embedding", "", "Path to a file containing Glove pretrained vectors")
 
-
-tf.flags.DEFINE_string("x_train_filepath", "../data/dataset/sample_seq2seq/train_small/train.article.txt", "Path to a file containing X training sentence")
-tf.flags.DEFINE_string("y_train_filepath", "../data/dataset/sample_seq2seq/train_small/train.title.txt", "Path to a file containing Y training title")
-tf.flags.DEFINE_string("x_dev_filepath", "../data/dataset/sample_seq2seq/train/valid.article.filter.txt", "Path to a file containing X valid sentence")
-tf.flags.DEFINE_string("y_dev_filepath", "../data/dataset/sample_seq2seq/train/valid.title.filter.txt", "Path to a file containing Y valid title")
-
+tf.flags.DEFINE_float("dev_sample_percentage", .1, "Percentage of the training data to use for validation")
+tf.flags.DEFINE_string("x_train_filepath", "../data/dataset/sample_seq2seq/train.article.txt", "Path to a file containing X training sentence")
+tf.flags.DEFINE_string("y_train_filepath", "../data/dataset/sample_seq2seq/train.title.txt", "Path to a file containing Y training title")
 
 tf.flags.DEFINE_integer("summary_max_len", 15, "Max length of output summarizations")
 
@@ -35,7 +30,6 @@ tf.flags.DEFINE_float("learning_rate", 1e-3, "Learning rate for backpropagation"
 tf.flags.DEFINE_integer("batch_size", 64, "Batch Size")
 tf.flags.DEFINE_integer("num_epochs", 10, "Number of training epochs")
 tf.flags.DEFINE_float("dropout_keep_prob", 0.75, "Dropout keep probability")
-tf.flags.DEFINE_boolean("small_data", False, help="Use only 20K samples of data")
 
 tf.flags.DEFINE_integer("evaluate_every", 1000, "Evaluate model on dev set after this many steps (default: 2000)")
 
@@ -44,23 +38,38 @@ FLAGS = tf.flags.FLAGS
 
 def preprocess():
 
+    # Load data
+    print("Loading data...")
+    x_text = load_utils.load_cleaned_text(FLAGS.x_train_filepath)
+    y_text = load_utils.load_cleaned_text(FLAGS.y_train_filepath)
 
-    x_text, y_text = load_utils.load_seq2seq(FLAGS.x_train_filepath, FLAGS.y_train_filepath)
-
-    print("Building dictionary...")
     full_text = x_text + y_text
     word_dict, reversed_dict = vocab_utils.build_dict_words(full_text,"seq2seq", FLAGS.output_dir)
 
+    x = vocab_utils.transform_text_v2(x_text, word_dict)
+    y = vocab_utils.transform_text_v2(y_text, word_dict, FLAGS.summary_max_len, False)
 
-    print("Loading training dataset...")
-    x_train = vocab_utils.transform_text(x_text, word_dict)
-    y_train = vocab_utils.transform_text_y_seq2seq(y_text, word_dict, FLAGS.summary_max_len)
+    x = np.array(x)
+    y = np.array(y)
 
-    x_train = np.array(x_train)
-    y_train = np.array(y_train)
+    # Randomly shuffle data
+    np.random.seed(10)
+    shuffle_indices = np.random.permutation(np.arange(len(y)))
+    x_shuffled = x[shuffle_indices]
+    y_shuffled = y[shuffle_indices]
 
+    # Split train/test set
+    # TODO: This is very crude, should use cross-validation
+    dev_sample_index = -1 * int(FLAGS.dev_sample_percentage * float(len(y)))
+    x_train, x_valid = x_shuffled[:dev_sample_index], x_shuffled[dev_sample_index:]
+    y_train, y_valid = y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
 
-    return x_train, y_train, word_dict, reversed_dict, [], []
+    del x, y
+
+    print("Vocabulary Size: {:d}".format(len(word_dict)))
+    print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_valid)))
+
+    return x_train, y_train, word_dict, reversed_dict, x_valid, y_valid
 
 
 
@@ -85,8 +94,6 @@ def train(x_train, y_train, word_dict, reversed_dict,  x_valid, y_valid):
         batches = load_utils.batch_iter_seq2seq(x_train, y_train, FLAGS.batch_size, FLAGS.num_epochs)
         num_batches_per_epoch = (len(x_train) - 1) // FLAGS.batch_size + 1
 
-        print("Iteration starts.")
-        print("Number of batches per epoch :", num_batches_per_epoch)
         for batch_x, batch_y in batches:
             batch_x_len = list(map(lambda x: len([y for y in x if y != 0]), batch_x))
             batch_decoder_input = list(map(lambda x: [word_dict["<s>"]] + list(x), batch_y))
@@ -108,7 +115,7 @@ def train(x_train, y_train, word_dict, reversed_dict,  x_valid, y_valid):
             }
 
             _, step, loss = sess.run([model.update, model.global_step, model.loss], feed_dict=train_feed_dict)
-
+            print loss
             if step % FLAGS.evaluate_every == 0:
                 print("step {0}: loss = {1}".format(step, loss))
 

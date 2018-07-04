@@ -1,17 +1,10 @@
 """Build vocabularies of words and tags from datasets"""
 
-import argparse
-import tensorflow as tf
-import json
 import os
 import numpy as np
-import sys
 import re
 import operator
 import collections
-from nltk.tokenize import word_tokenize
-import re
-import pickle
 
 
 PADDING_ = "<padding>"
@@ -139,33 +132,24 @@ def load_reverse_dict(path):
 
 
 
-def transform_text2(data, dict_, tokenize = True, crop = -1, pad = True):
+def transform_text_v2(data, dict_, crop = -1, pad = True):
 
-    x = data
 
-    if tokenize:
-        x = list(map(lambda d: word_tokenize(d), x))
-
-    x = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict[UNK_]), d.split(" "))), data))
+    t_data = list(map(lambda d: list(map(lambda w: dict_.get(w, dict_[UNK_]), d.split(" "))), data))
 
     if crop != 0:
         if crop == -1:
-            max_element_length = max([len(r) for r in x])
+            max_element_length = max([len(r) for r in t_data])
         else:  
             max_element_length = crop
         
-        x = list(map(lambda d: d[:max_element_length], x))
+        t_data = list(map(lambda d: d[:max_element_length], t_data))
 
-        if pad:
-            x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[PADDING_]], x))
-
-    
-   
-    return x
+        if pad and PADDING_ in dict_:
+            t_data = list(map(lambda d: d + (max_element_length - len(d)) * [dict_[PADDING_]], t_data))
 
 
-
-
+    return t_data
 
 
 def transform_text(data, word_dict):
@@ -178,14 +162,6 @@ def transform_text(data, word_dict):
     x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[PADDING_]], x))
     return x
 
-
-
-def transform_text_y_seq2seq(data, word_dict, summary_max_len):
-
-    y = list(map(lambda d: word_tokenize(d), data))
-    y = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict["<unk>"]), d)), y))
-    y = list(map(lambda d: d[:(summary_max_len - 1)], y))
-    return y
 
 
 def transform_labels(labels, labels_dict):

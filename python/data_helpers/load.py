@@ -1,10 +1,9 @@
+#! /usr/bin/env python
+
 import numpy as np
 import re
-import itertools
 import json
 import os
-import operator
-import collections
 
 
 def is_number(s):
@@ -48,6 +47,14 @@ def combine_data_files(data_files):
 
     return lines
 
+
+def load_cleaned_text(filepath):
+    with open(filepath, "r") as f:
+        list_ = list(map(lambda x: clean_str(x), f.readlines()))
+
+    return list_
+
+
 def load_data_and_labels(data_files, output_dir = None):
 
     # Load data from files
@@ -74,8 +81,8 @@ def load_data_and_labels(data_files, output_dir = None):
 
     return x_text, y_text
 
-def load_sequence_data_and_labels(data_files, output_dir = None):
 
+def load_sequence_data_and_labels(data_files, output_dir = None):
 
     # Load data from files
     if len(data_files) > 1:
@@ -84,7 +91,6 @@ def load_sequence_data_and_labels(data_files, output_dir = None):
         examples = list(open(data_files[0], "r").readlines())
     else:
         examples = []
-
 
     x_text = [] 
     y_text = []
@@ -110,8 +116,6 @@ def load_sequence_data_and_labels(data_files, output_dir = None):
     #x_text = [clean_str(sent) for sent in x_text]
 
     return x_text, y_text
-
-
 
 
 
@@ -156,13 +160,3 @@ def batch_iter_seq2seq(inputs, outputs, batch_size, num_epochs):
             end_index = min((batch_num + 1) * batch_size, len(inputs))
             yield inputs[start_index:end_index], outputs[start_index:end_index]
 
-
-
-def load_seq2seq(x_filepath, y_filepath):
-    with open(x_filepath, "r") as f:
-        article_list = list(map(lambda x: clean_str(x), f.readlines()))
-
-    with open(y_filepath, "r") as f:
-        title_list = list(map(lambda x: clean_str(x), f.readlines()))
-
-    return article_list, title_list

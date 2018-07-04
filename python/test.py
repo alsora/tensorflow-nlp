@@ -4,24 +4,22 @@ import tensorflow as tf
 import numpy as np
 import os
 import time
-import datetime
-import data_helpers
 from tf_helpers.models import base_model
-from tensorflow.contrib import learn
 import data_helpers.load as load_utils
 import data_helpers.vocab as vocab_utils
+import data_helpers.evaluation as evaluation_utils 
 import csv
 
 # Parameters
 # ==================================================
 
 # Data Parameters
-tf.flags.DEFINE_string("data", "../data/dataset/sample_data/test.tsv", "Data source tab separated files. It's possible to provide more than 1 file using a comma")
+tf.flags.DEFINE_string("data", "../data/dataset/sample_text_classification/test.tsv", "Data source tab separated files. It's possible to provide more than 1 file using a comma")
 tf.flags.DEFINE_string("it", "", "Interactive mode for evaluating sentences from command line")
-tf.flags.DEFINE_string("model_dir", "", "Directory containing a trained model, i.e. checkpoints, saved, vocab_words")
+tf.flags.DEFINE_string("output_dir", "", "Directory containing a trained model, i.e. checkpoints, saved, vocab_words")
 
 # Eval Parameters
-tf.flags.DEFINE_integer("batch_size", 64, "Batch Size (default: 64)")
+tf.flags.DEFINE_integer("batch_size", 64, "Batch Size")
 
 # Misc Parameters
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
@@ -31,102 +29,58 @@ tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on 
 FLAGS = tf.flags.FLAGS
 
 
-
 def loadModel():
 
     model = base_model.BaseModel(FLAGS)
     model.initialize_session()
-    model.restore_saved_model(FLAGS.model_dir)
+    model.restore_saved_model(FLAGS.output_dir)
 
     return model
 
 
 
 def evaluate(model):
-    '''
-    # CHANGE THIS: Load data. Load your own data here
-    if FLAGS.eval_train:
-        x_raw, y_test = data_helpers.load_data_and_labels(FLAGS.positive_data_file, FLAGS.negative_data_file)
-        y_test = np.argmax(y_test, axis=1)
-    else:
-        x_raw = ["a masterpiece four years in the making", "everything is off."]
-        y_test = [1, 0]
-
 
     # Load data
     print("Loading data...")
     files_list = FLAGS.data.split(",")
-    x_text, y = load_utils.load_data_and_labels(files_list)
-
-    # Build vocabulary
-    max_element_length = max([len(x.split(" ")) for x in x_text]) 
-    # max_element_length = 20
-
-    word_dict, reversed_dict = load_utils.build_dict(x_text, FLAGS.output_dir)
-
-    x = load_utils.transform_text(x_text, word_dict, max_element_length)
-
-    x = np.array(x)
-    y = np.array(y)
-    '''
-
-
-    x_text = ["super beautiful like it very much best love", "terrible sad shit fuck worst ruined"]
-    y = [1, 0]
+    x_text, y_text = load_utils.load_data_and_labels(files_list)
 
     # Map data into vocabulary
-    words_dict_path = os.path.join(FLAGS.model_dir, "vocab_words")
-    word_dict = vocab_utils.load_dict(words_dict_path)
+    words_dict_path = os.path.join(FLAGS.output_dir, "vocab_words")
+    labels_dict_path = os.path.join(FLAGS.output_dir, "vocab_labels")
 
-    x = vocab_utils.transform_text(x_text, word_dict)
+    word_dict = vocab_utils.load_dict(words_dict_path)
+    labels_dict = vocab_utils.load_dict(labels_dict_path)
+    reversed_labels_dict = vocab_utils.reverse_dict(labels_dict)
+
+    max_element_length = 119
+    x = vocab_utils.transform_text_v2(x_text, word_dict, max_element_length)
+    y = vocab_utils.transform_labels(y_text, labels_dict)
 
     x = np.array(x)
     y = np.array(y)
 
     print("\nEvaluating...\n")
+    # Generate batches for one epoch
+    batches = load_utils.batch_iter(x, y, FLAGS.batch_size, 1, shuffle=False)
 
-    # Evaluation
-    # ==================================================
-    checkpoint_file = tf.train.latest_checkpoint(FLAGS.checkpoint_dir)
-    graph = tf.Graph()
-    with graph.as_default():
-        session_conf = tf.ConfigProto(
-        allow_soft_placement=FLAGS.allow_soft_placement,
-        log_device_placement=FLAGS.log_device_placement)
-        sess = tf.Session(config=session_conf)
-        with sess.as_default():
-            # Load the saved meta graph and restore variables
-            saver = tf.train.import_meta_graph("{}.meta".format(checkpoint_file))
-            saver.restore(sess, checkpoint_file)
+    # Collect the predictions here
+    all_predictions = []
+    all_predictions = np.array(all_predictions)
 
-            # Get the placeholders from the graph by name
-            input_x = graph.get_operation_by_name("input_x").outputs[0]
+    correct_predictions = 0
+    total_predictions = 0
+    total_correct = 0
 
-            # Tensors we want to evaluate
-            predictions = graph.get_operation_by_name("output/predictions").outputs[0]
+    for batch in batches:
+        x_batch, y_batch = zip(*batch)
+        batch_predictions = model.predict_step(x_batch)
+        #all_predictions = np.concatenate(list(batch_predictions, all_predictions))
 
-            # Generate batches for one epoch
-            batches = data_helpers.batch_iter(list(x), FLAGS.batch_size, 1, shuffle=False)
-
-            # Collect the predictions here
-            all_predictions = []
-
-            for x_batch in batches:
-                batch_predictions = sess.run(predictions, {input_x: x_batch, dropout_keep_prob: 1.0})
-                all_predictions = np.concatenate([all_predictions, batch_predictions])
-
-    # Print accuracy if y_test is defined
-    if y is not None:
-        correct_predictions = float(sum(all_predictions == y))
-        print("Total number of test examples: {}".format(len(y)))
-        print("Accuracy: {:g}".format(correct_predictions/float(len(y))))
-
-    # Save the evaluation to a csv
-    predictions_human_readable = np.column_stack((np.array(x_raw), all_predictions))
-    out_path = os.path.join(FLAGS.checkpoint_dir, "..", "prediction.csv")
-    print("Saving evaluation to {0}".format(out_path))
-    with open(out_path, 'w') as f:
-        csv.writer(f).writerows(predictions_human_readable)
+        #batch_correct = float(sum(all_predictions == y_batch))
+        #correct_predictions += batch_correct
+        #total_predictions += len(x_batch)
 
 
 
@@ -135,13 +89,11 @@ def interactive(model):
     Args:
         model: instance of network model
     """
-    model.logger.info("""This is an interactive mode.
-    To exit, enter 'exit'.
-    You can enter a text like
-    input> I love Paris""")
+    model.logger.info(
+    "This is an interactive mode.\nTo exit, enter 'exit'.\nYou can enter a text like\ninput> I love Paris")
 
-    words_dict_path = os.path.join(FLAGS.model_dir, "vocab_words")
-    labels_dict_path = os.path.join(FLAGS.model_dir, "vocab_labels")
+    words_dict_path = os.path.join(FLAGS.output_dir, "vocab_words")
+    labels_dict_path = os.path.join(FLAGS.output_dir, "vocab_labels")
 
     word_dict = vocab_utils.load_dict(words_dict_path)
     reversed_labels_dict = vocab_utils.load_reverse_dict(labels_dict_path)
@@ -156,23 +108,18 @@ def interactive(model):
 
         tokens = text.strip()
 
-        if tokens == ["exit"]:
+        if tokens == "exit":
             break
 
-        PADDING_ = "<padding>"
-        UNK_ = "<unk>"
-
         data = [tokens]
-        max_element_length = 119
 
-        x = list(map(lambda d: list(map(lambda w: word_dict.get(w, word_dict[UNK_]), d.split(" "))), data))
-        x = list(map(lambda d: d[:max_element_length], x))
-        x = list(map(lambda d: d + (max_element_length - len(d)) * [word_dict[PADDING_]], x))
+        max_element_length = 119
+        x = vocab_utils.transform_text_v2(data, word_dict, max_element_length)
 
         preds_ids = model.predict_step(x)
-        preds = [reversed_labels_dict[idx] for idx in list(pred_ids[0])]
+        preds = [reversed_labels_dict[idx] for idx in list(preds_ids[0])]
 
-        to_print = align_data({"input": tokens, "output": preds})
+        to_print = evaluation_utils.align_data({"input": data, "output": preds})
 
         for key, seq in to_print.items():
             model.logger.info(seq)
@@ -182,10 +129,11 @@ def interactive(model):
 
 def main(argv=None):
 
+    print "FLAGS:", FLAGS.output_dir
 
     model = loadModel()
 
-    if FLAGS.it:
+    if FLAGS.it or not FLAGS.data:
         interactive(model)
     else:
         evaluate(model)

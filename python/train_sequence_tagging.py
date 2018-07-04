@@ -61,13 +61,6 @@ FLAGS = tf.flags.FLAGS
 #     print("{}={}".format(attr.upper(), value))
 # print("")
 
-if not FLAGS.output_dir:
-    timestamp = str(int(time.time()))
-    FLAGS.output_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", FLAGS.model + timestamp))
-
-if not os.path.exists(FLAGS.output_dir):
-    os.makedirs(FLAGS.output_dir)
-
 
 def preprocess():
     # Data Preparation
@@ -101,7 +94,6 @@ def preprocess():
     dev_sample_index = -1 * int(FLAGS.dev_sample_percentage * float(len(y)))
     x_train, x_valid = x_shuffled[:dev_sample_index], x_shuffled[dev_sample_index:]
     y_train, y_valid = y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
-
 
     del x, y
 
@@ -140,7 +132,6 @@ def train(x_train, y_train, word_dict, reversed_dict, labels_dict, x_valid, y_va
     train_batches = load_utils.batch_iter(x_train, y_train, FLAGS.batch_size, FLAGS.num_epochs)
     num_batches_per_epoch = (len(x_train) - 1) // FLAGS.batch_size + 1
 
-
     max_accuracy = 0
     # Training loop. For each batch...
     for train_batch in train_batches:
@@ -175,6 +166,15 @@ def train(x_train, y_train, word_dict, reversed_dict, labels_dict, x_valid, y_va
 
 
 def main(argv=None):
+
+    if not FLAGS.output_dir:
+        now = datetime.datetime.now()
+        timestamp = str(now.strftime("%Y_%m_%d_%H_%M_%S"))
+        FLAGS.output_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", FLAGS.model + timestamp))
+
+    if not os.path.exists(FLAGS.output_dir):
+        os.makedirs(FLAGS.output_dir)
+
     x_train, y_train, word_dict, reversed_dict, labels_dict, x_valid, y_valid = preprocess()
     train(x_train, y_train, word_dict, reversed_dict, labels_dict, x_valid, y_valid)
 
