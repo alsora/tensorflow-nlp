@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 import data_helpers.load as load_utils
 from logger_utils import get_logger
+import tf_helpers.hyperparams_flags
 
 class BaseModel(object):
     """Generic base class for neural network models"""
@@ -13,6 +14,26 @@ class BaseModel(object):
         self.logger = get_logger(os.path.join(self.FLAGS.output_dir, "log.txt"))
         self.session = None
         self.saver = None
+        
+        self.overwrite_hyperparams()
+
+
+    def overwrite_hyperparams(self):
+
+
+        try:
+            default_hyperparams = self.hyperparams
+            for key in default_hyperparams:
+                try:
+                    flag = self.FLAGS[key]
+                    param_value = flag.value
+                    if param_value is not None:
+                        self.hyperparams[key] = param_value
+                except:
+                    pass
+        except:
+            pass
+
 
 
     def initialize_session(self):

@@ -24,18 +24,6 @@ tf.flags.DEFINE_string("model", "blstm", "Network model to train: blstm | blstm_
 # Model directory
 tf.flags.DEFINE_string("output_dir", "", "Where to save the trained model, checkpoints and stats (default: pwd/runs/timestamp)")
 
-# Models Hyperparameters
-tf.flags.DEFINE_integer("embedding_dim", 300, "Dimensionality of character embedding")
-tf.flags.DEFINE_string("filter_sizes", "3,4,5", "Comma-separated filter sizes")
-tf.flags.DEFINE_integer("num_filters", 128, "Number of filters per filter size")
-tf.flags.DEFINE_integer("num_cells", 100, "Number of cells in each BLSTM layer")
-tf.flags.DEFINE_integer("num_layers", 2, "Number of BLSTM layers")
-tf.flags.DEFINE_float("learning_rate", 1e-3, "Learning rate for backpropagation")
-tf.flags.DEFINE_string("glove_embedding", "", "Path to a file containing Glove pretrained vectors")
-tf.flags.DEFINE_string("fasttext_embedding", "", "Path to a file containing Fasttext pretrained vectors")
-tf.flags.DEFINE_float("dropout_keep_prob", 0.75, "Dropout keep probability")
-tf.flags.DEFINE_float("l2_reg_lambda", 0.0, "L2 regularization lambda")
-
 # Training parameters
 tf.flags.DEFINE_integer("batch_size", 64, "Batch Size")
 tf.flags.DEFINE_integer("num_epochs", 10, "Number of training epochs")
@@ -52,11 +40,6 @@ tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device 
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
 
 FLAGS = tf.flags.FLAGS
-# FLAGS._parse_flags()
-# print("\nParameters:")
-# for attr, value in sorted(FLAGS.__flags.items()):
-#     print("{}={}".format(attr.upper(), value))
-# print("")
 
 def preprocess():
     # Data Preparation
@@ -67,7 +50,7 @@ def preprocess():
     files_list = FLAGS.data.split(",")
     x_text, y_text = load_utils.load_data_and_labels(files_list)
 
-    word_dict, reversed_dict = vocab_utils.build_dict_words(x_text, FLAGS.output_dir)
+    word_dict, reversed_dict = vocab_utils.build_dict_words(x_text, "text_classification", FLAGS.output_dir)
     labels_dict, _ = vocab_utils.build_dict_labels(y_text, FLAGS.output_dir)
 
     x = vocab_utils.transform_text(x_text, word_dict)
@@ -120,6 +103,7 @@ def train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid):
     else:
         raise NotImplementedError()
 
+    model.overwrite_hyperparams()
 
     model.initialize_session()
 

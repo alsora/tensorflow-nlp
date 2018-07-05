@@ -4,6 +4,17 @@ from tf_helpers.layer_utils import *
 from base_model import BaseModel
 
 
+hyperparams = { "embedding_dim": 300,
+                "num_cells": 100,
+                "num_layers": 2,
+                "learning_rate": 1e-3,
+                "glove_embedding": '',
+                "fasttext_embedding": '',
+                "dropout_keep_prob": 0.75,
+                'l2_reg_lambda': 0.0
+                }
+
+
 class AttentionRNN(BaseModel):
     """
     A Bidirection LSTM with attention for text classification.
@@ -11,6 +22,8 @@ class AttentionRNN(BaseModel):
     """
     def __init__(
         self, reversed_dict, sequence_length, num_classes, FLAGS):
+
+        self.hyperparams = hyperparams
 
         super(AttentionRNN, self).__init__(FLAGS)
 

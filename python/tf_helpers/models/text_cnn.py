@@ -4,6 +4,17 @@ from tf_helpers.layer_utils import *
 from base_model import BaseModel
 
 
+hyperparams = { "embedding_dim": 128,
+                "filter_sizes": "3,4,5",
+                "num_filters": 128,
+                "learning_rate": 1e-3,
+                "glove_embedding": '',
+                "fasttext_embedding": '',
+                "dropout_keep_prob": 0.5,
+                'l2_reg_lambda': 0.0
+                }
+
+
 class TextCNN(BaseModel):
     """
     A CNN for text classification.
@@ -11,6 +22,8 @@ class TextCNN(BaseModel):
     """
     def __init__(
       self, reversed_dict, sequence_length, num_classes, FLAGS):
+
+        self.hyperparams = hyperparams
 
         super(TextCNN, self).__init__(FLAGS)
 

@@ -4,6 +4,19 @@ from tf_helpers.layer_utils import *
 from base_model import BaseModel
 
 
+hyperparams = { "embedding_dim": 300,
+                "embedding_dim_char": 100,
+                "num_layers": 2,
+                "learning_rate": 1e-3,
+                "glove_embedding": '',
+                "fasttext_embedding": '',
+                "dropout_keep_prob": 0.75,
+                'l2_reg_lambda': 0.0,
+                'use_crf': True,
+                'use_chars': False
+                }
+
+
 class NER_LSTM(BaseModel):
     """
     A LSTM + CRF for NER.
@@ -12,8 +25,10 @@ class NER_LSTM(BaseModel):
     #self, reversed_dict, sequence_length, num_classes, FLAGS):
     def __init__( self, reversed_dict, sequence_length, word_length, num_classes, FLAGS):
 
-        super(NER_LSTM, self).__init__(FLAGS)
+        self.hyperparams = hyperparams
 
+
+        super(NER_LSTM, self).__init__(FLAGS)
 
         # Placeholders for input, output and dropout
         self.input_x = tf.placeholder(tf.int32, shape=[None, sequence_length], name="input_x")
