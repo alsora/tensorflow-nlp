@@ -1,6 +1,7 @@
 # Datasets and models except sample
 /data/*
 !/data/dataset
+!/data/README.md
 /data/dataset/*
 !/data/dataset/sample_text_classification
 !/data/dataset/sample_sequence_tagging
@@ -8,6 +9,10 @@
 !/data/embedding
 /data/embedding/*
 !/data/embedding/download_glove.py
+!/data/models/
+/data/models/*
+!/data/models/.gitkeep
+
 
 #Mac generated folder styles
 .DS_Store
