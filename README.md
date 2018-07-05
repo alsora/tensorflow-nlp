@@ -42,8 +42,9 @@ We are going to export some environment variable, build the Docker image and the
         $ bash build.sh  
         $ bash run.sh $VERSION
 
-Note that also an alternative run script is provided. This can be used instead of "run.sh" and will create a volume for all the Python directory into the Docker container. This allows to easily modify the code using your preferred editor from the host pc.
-Be careful that this implies also that EVERY CHANGE TO THE CODE OR TO THE REPOSITORY THAT YOU PERFORM FROM INSIDE THE CONTAINER WILL REFLECT ON THE FILES ON THE HOST!!!
+An alternative run script is provided. This can be used instead of "run.sh" and will create a volume for all the Python directory into the Docker container. This allows to easily modify the code using your preferred editor from the host pc.
+
+Be careful: this implies also that EVERY CHANGE TO THE CODE OR TO THE REPOSITORY THAT YOU PERFORM FROM INSIDE THE CONTAINER WILL REFLECT ON THE FILES ON THE HOST!!!
 
         $ bash run_dev.sh $VERSION
 
