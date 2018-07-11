@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/alsora/tensorflow-nlp.svg?branch=master)](https://travis-ci.org/alsora/tensorflow-nlp)
+
 # tensorflow-NLP
 
 This repository implements a Tensorflow framework for performing Text Classification and Natural Language Processing (NLP) tasks.
