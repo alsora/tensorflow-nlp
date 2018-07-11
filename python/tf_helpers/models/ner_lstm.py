@@ -13,7 +13,7 @@ hyperparams = { "embedding_dim": 300,
                 "fasttext_embedding": '',
                 "dropout_keep_prob": 0.75,
                 'l2_reg_lambda': 0.0,
-                'use_crf': True,
+                'use_crf': False,
                 'use_chars': False
                 }
 
