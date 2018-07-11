@@ -4,7 +4,7 @@ import tensorflow as tf
 
 
 tf.flags.DEFINE_integer("embedding_dim", None, "Dimensionality of words embedding")
-tf.flags.DEFINE_integer("embedding_dim_char", None, "Dimensionality of character embedding")
+tf.flags.DEFINE_integer("embedding_dim_char", None, "Dimensionality of characterss embedding")
 tf.flags.DEFINE_string("filter_sizes", None, "Comma-separated filter sizes")
 tf.flags.DEFINE_integer("num_filters", None, "Number of filters per filter size")
 tf.flags.DEFINE_integer("num_cells", None, "Number of cells in each BLSTM layer")

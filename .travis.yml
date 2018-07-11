@@ -1,0 +1,10 @@
+language: python
+install:
+ - pip install --upgrade pip
+ - pip --version
+ - pip install tensorflow
+ - pip install -r python/script/requirements.txt
+script:
+- python python/train_text_classification.py
+- python python/train_sequence_tagging.py
+ 
