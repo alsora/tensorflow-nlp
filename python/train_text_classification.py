@@ -34,7 +34,6 @@ tf.flags.DEFINE_integer("checkpoint_every", 2000, "Save model after this many st
 tf.flags.DEFINE_integer("num_checkpoints", 25, "Max number of checkpoints to store")
 tf.flags.DEFINE_boolean("summary", False, "Save train summaries to folder")
 
-
 # Misc Parameters
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")

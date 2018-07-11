@@ -6,6 +6,7 @@ from base_model import BaseModel
 
 hyperparams = { "embedding_dim": 300,
                 "embedding_dim_char": 100,
+                "num_cells": 100,
                 "num_layers": 2,
                 "learning_rate": 1e-3,
                 "glove_embedding": '',
@@ -27,7 +28,6 @@ class NER_LSTM(BaseModel):
 
         self.hyperparams = hyperparams
 
-
         super(NER_LSTM, self).__init__(FLAGS)
 
         # Placeholders for input, output and dropout
@@ -39,27 +39,27 @@ class NER_LSTM(BaseModel):
         # hyper parameters
         self.dropout_keep_prob = tf.placeholder(dtype=tf.float32, shape=[], name="dropout_keep_prob")
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
-        self.learning_rate = FLAGS.learning_rate
+        self.learning_rate = self.hyperparams['learning_rate']
 
         l2_loss = tf.constant(0.0)
 
         with tf.name_scope("embedding"):
-            if FLAGS.glove_embedding:
-                init_embeddings = tf.constant(get_glove_embedding(reversed_dict, FLAGS.glove_embedding),dtype=tf.float32)
+            if self.hyperparams['glove_embedding']:
+                init_embeddings = tf.constant(get_glove_embedding(reversed_dict, self.hyperparams['glove_embedding']),dtype=tf.float32)
                 self.embeddings = tf.get_variable("embeddings", initializer=init_embeddings, trainable=False)
-            elif FLAGS.fasttext_embedding:
-                init_embeddings = tf.constant(get_fasttext_embedding(reversed_dict, FLAGS.fasttext_embedding), dtype=tf.float32)
+            elif self.hyperparams['fasttext_embedding']:
+                init_embeddings = tf.constant(get_fasttext_embedding(reversed_dict, self.hyperparams['fasttext_embedding']), dtype=tf.float32)
                 self.embeddings = tf.get_variable("embeddings", initializer=init_embeddings, trainable=False)
             else:
                 vocab_size = len(reversed_dict)
-                init_embeddings = tf.random_uniform([vocab_size, FLAGS.embedding_dim])
+                init_embeddings = tf.random_uniform([vocab_size, self.hyperparams['embedding_dim']])
                 self.embeddings = tf.get_variable("embeddings", initializer=init_embeddings, trainable=True)
 
             self.data_embedding = tf.nn.embedding_lookup(self.embeddings, self.input_x, name="word_embeddings")
 
 
         with tf.name_scope("embedding_char"):
-            if FLAGS.embedding_char:
+            if self.hyperparams['use_chars']:
                 # get char embeddings matrix
                 _char_embeddings = tf.get_variable(name="_char_embeddings", dtype=tf.float32, shape=[FLAGS.nchar, FLAGS.dim_char])
 
@@ -96,8 +96,8 @@ class NER_LSTM(BaseModel):
 
         with tf.name_scope("birnn"):
 
-            fw_cells = [rnn.BasicLSTMCell(FLAGS.num_cells) for _ in range(FLAGS.num_layers)]
-            bw_cells = [rnn.BasicLSTMCell(FLAGS.num_cells) for _ in range(FLAGS.num_layers)]
+            fw_cells = [rnn.BasicLSTMCell(self.hyperparams['num_cells']) for _ in range(self.hyperparams['num_layers'])]
+            bw_cells = [rnn.BasicLSTMCell(self.hyperparams['num_cells']) for _ in range(self.hyperparams['num_layers'])]
             fw_cells = [rnn.DropoutWrapper(cell, output_keep_prob=self.dropout_keep_prob) for cell in fw_cells]
             bw_cells = [rnn.DropoutWrapper(cell, output_keep_prob=self.dropout_keep_prob) for cell in bw_cells]
 
@@ -123,7 +123,7 @@ class NER_LSTM(BaseModel):
         with tf.name_scope("loss"):
 
             """Defines the loss"""
-            if FLAGS.crf:
+            if self.hyperparams['use_crf']:
                 dense_y = tf.argmax(self.input_y, -1, output_type=tf.int32)
                 log_likelihood, trans_params = tf.contrib.crf.crf_log_likelihood(
                     self.logits, dense_y, sequence_length)
@@ -133,7 +133,7 @@ class NER_LSTM(BaseModel):
                 losses = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logits, labels=self.input_y)
                 #mask = tf.sequence_mask(sequence_length)
                 #losses = tf.boolean_mask(losses, mask)
-                self.loss = tf.reduce_mean(losses) + FLAGS.l2_reg_lambda * l2_loss
+                self.loss = tf.reduce_mean(losses) + self.hyperparams['l2_reg_lambda'] * l2_loss
 
                 opt = tf.train.AdamOptimizer(self.learning_rate)
                 self.grads_and_vars = opt.compute_gradients(self.loss)
