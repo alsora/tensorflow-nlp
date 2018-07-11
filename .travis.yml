@@ -5,7 +5,7 @@ install:
  - pip install tensorflow
  - pip install -r python/script/requirements.txt
 script:
--cd python
+- cd python
 - python train_text_classification.py --num_epochs 1
 - python train_sequence_tagging.py --num_epochs 1
  
