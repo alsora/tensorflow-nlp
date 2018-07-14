@@ -45,7 +45,7 @@ General purpose flags:
       --evaluate_every: Evaluate model on dev set after this many steps
         (default: '2000')
         (an integer)
-      --output_dir: Where to save the trained model, checkpoints and stats (default: pwd/runs/timestamp)
+      --model_dir: Where to save the trained model, checkpoints and stats (default: pwd/runs/timestamp)
         (default: '')
       --num_checkpoints: Max number of checkpoints to store
         (default: '25')

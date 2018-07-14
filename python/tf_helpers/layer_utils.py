@@ -2,7 +2,16 @@ from gensim.models.keyedvectors import KeyedVectors
 from gensim.test.utils import get_tmpfile
 from gensim.scripts.glove2word2vec import glove2word2vec
 from gensim.models import FastText
+import tensorflow as tf
 import numpy as np
+
+def get_dataset(input_x, input_y, FLAGS):
+    dataset = tf.data.Dataset.from_tensor_slices((input_x, input_y))
+    dataset  = dataset.shuffle(buffer_size=1000)
+    dataset = dataset.batch(FLAGS.batch_size)
+    dataset = dataset.repeat()
+
+    return dataset
 
 
 def get_glove_embedding(reversed_dict, glove_file):

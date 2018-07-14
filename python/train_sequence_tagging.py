@@ -23,7 +23,7 @@ tf.flags.DEFINE_string("data", "../data/dataset/sample_sequence_tagging/train.ts
 tf.flags.DEFINE_string("model", "ner_lstm", "Network model to train: ner_lstm (default: ner_lstm)")
 
 # Model directory
-tf.flags.DEFINE_string("output_dir", "", "Where to save the trained model, checkpoints and stats (default: current_dir/runs/timestamp)")
+tf.flags.DEFINE_string("model_dir", "", "Where to save the trained model, checkpoints and stats (default: current_dir/runs/timestamp)")
 
 # Training parameters
 tf.flags.DEFINE_integer("batch_size", 64, "Batch Size (default: 64)")
@@ -55,8 +55,8 @@ def preprocess():
     # Build vocabulary
     max_element_length = max([len(e) for e in x_text])
 
-    word_dict, reversed_dict = vocab_utils.build_dict_words(x_text, "sequence_tagging", FLAGS.output_dir)
-    labels_dict, _ = vocab_utils.build_sequence_dict_labels(y_text, FLAGS.output_dir)
+    word_dict, reversed_dict = vocab_utils.build_dict_words(x_text, "sequence_tagging", FLAGS.model_dir)
+    labels_dict, _ = vocab_utils.build_sequence_dict_labels(y_text, FLAGS.model_dir)
 
     x = vocab_utils.transform_text(x_text, word_dict)
     y = vocab_utils.transform_sequence_labels(y_text, labels_dict)
@@ -109,52 +109,33 @@ def train(x_train, y_train, word_dict, reversed_dict, labels_dict, x_valid, y_va
 
     model.initialize_summaries()
 
-    # Generate batches
-    train_batches = load_utils.batch_iter(x_train, y_train, FLAGS.batch_size, FLAGS.num_epochs)
-    num_batches_per_epoch = (len(x_train) - 1) // FLAGS.batch_size + 1
-
     max_accuracy = 0
-    # Training loop. For each batch...
-    for train_batch in train_batches:
-        x_train_batch, y_train_batch = zip(*train_batch)
-        loss = model.train_step(x_train_batch, y_train_batch)
-        current_step = tf.train.global_step(model.session, model.global_step)
+    for epoch in range(FLAGS.num_epochs):
 
-        if (current_step + 1) % 10 == 0:
-            epoch = ( current_step // num_batches_per_epoch) + 1
-            relative_step = (current_step % num_batches_per_epoch) + 1
-            time_str = datetime.datetime.now().isoformat()
-            print("{}: epoch {}/{}, step {}/{}, loss {:g}".format(time_str, epoch, FLAGS.num_epochs, relative_step, num_batches_per_epoch, loss))
+        print "Epoch ", epoch + 1, "/", FLAGS.num_epochs
 
-        if current_step % FLAGS.evaluate_every == 0:
+        model.train_step(x_train, y_train)
 
-            valid_accuracy, cnf_matrix = model.valid_step(x_valid, y_valid)
-            time_str = datetime.datetime.now().isoformat()
-            print("Evaluation:")
-            print("{}: valid_accuracy {:g}".format(time_str, valid_accuracy))
-            print("Confusion matrix:")
-            print(cnf_matrix)
-        
-            if valid_accuracy > max_accuracy:
-                max_accuracy = valid_accuracy
-                path = os.path.join(FLAGS.output_dir, "saved")
-                saver_utils.save_model(model.session, path)
-                print("Saved model with better accuracy to {}\n".format(path))
+        model.save_session()
 
-        if current_step % FLAGS.checkpoint_every == 0:
-            model.save_session()
+        valid_accuracy,_ = model.test_step(x_valid, y_valid)
+
+        if valid_accuracy > max_accuracy:
+            max_accuracy = valid_accuracy
+            model.save_model()
+
 
 
 
 def main(argv=None):
 
-    if not FLAGS.output_dir:
+    if not FLAGS.model_dir:
         now = datetime.datetime.now()
         timestamp = str(now.strftime("%Y_%m_%d_%H_%M_%S"))
-        FLAGS.output_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", FLAGS.model + timestamp))
+        FLAGS.model_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", FLAGS.model + timestamp))
 
-    if not os.path.exists(FLAGS.output_dir):
-        os.makedirs(FLAGS.output_dir)
+    if not os.path.exists(FLAGS.model_dir):
+        os.makedirs(FLAGS.model_dir)
 
     x_train, y_train, word_dict, reversed_dict, labels_dict, x_valid, y_valid = preprocess()
     train(x_train, y_train, word_dict, reversed_dict, labels_dict, x_valid, y_valid)

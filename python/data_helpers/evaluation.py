@@ -40,8 +40,26 @@ def align_data(data):
         data_aligned['input'] = data['input']
         data_aligned['output'] = data['output']
 
-
     return data_aligned
+
+
+def ids_to_labels(preds_ids, reversed_labels_dict):
+    # np.asarray(x).tolist()
+
+    print preds_ids
+    print preds_ids[0]
+
+    array_pred = np.asarray(preds_ids[0])
+
+    preds = [reversed_labels_dict[idx] for idx in np.asarray(preds_ids[0]).tolist()]
+
+
+
+
+    return labels
+
+
+
 
 
 

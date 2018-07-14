@@ -6,7 +6,7 @@ import numpy as np
 import os
 import time
 import argparse
-import shutil
+
 
 
 parser = argparse.ArgumentParser()
@@ -57,24 +57,6 @@ def freeze_graph(model_dir, output_node_names = ''):
     print("%d ops in the final graph." % len(output_graph_def.node))
 
 
-
-
-
-def save_model(session, output_folder):
-
-    if os.path.exists(output_folder):
-        shutil.rmtree(output_folder)
-
-    builder = tf.saved_model.builder.SavedModelBuilder(output_folder)
-    builder.add_meta_graph_and_variables(
-        session,
-        [tf.saved_model.tag_constants.SERVING],
-        clear_devices=True)
-    
-
-    builder.save()
-
-    print ("Model saved in " + output_folder)
 
 
 if __name__ == '__main__':

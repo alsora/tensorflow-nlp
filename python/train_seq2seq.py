@@ -22,7 +22,7 @@ tf.flags.DEFINE_string("y_train_filepath", "../data/dataset/sample_seq2seq/train
 
 tf.flags.DEFINE_integer("summary_max_len", 15, "Max length of output summarizations")
 
-tf.flags.DEFINE_string("output_dir", "", "Where to save the trained model, checkpoints and stats (default: current_dir/runs/timestamp)")
+tf.flags.DEFINE_string("model_dir", "", "Where to save the trained model, checkpoints and stats (default: current_dir/runs/timestamp)")
 
 tf.flags.DEFINE_string("fasttext_embedding", "", "Path to a file containing Fasttext pretrained vectors")
 tf.flags.DEFINE_integer("embedding_size", 300, "Dimensionality of character embedding")
@@ -44,7 +44,7 @@ def preprocess():
     y_text = load_utils.load_cleaned_text(FLAGS.y_train_filepath)
 
     full_text = x_text + y_text
-    word_dict, reversed_dict = vocab_utils.build_dict_words(full_text,"seq2seq", FLAGS.output_dir)
+    word_dict, reversed_dict = vocab_utils.build_dict_words(full_text,"seq2seq", FLAGS.model_dir)
 
     x = vocab_utils.transform_text_v2(x_text, word_dict)
     y = vocab_utils.transform_text_v2(y_text, word_dict, FLAGS.summary_max_len, False)
@@ -125,13 +125,13 @@ def train(x_train, y_train, word_dict, reversed_dict,  x_valid, y_valid):
 
 def main(argv=None):
 
-    if not FLAGS.output_dir:
+    if not FLAGS.model_dir:
         now = datetime.datetime.now()
         timestamp = str(now.strftime("%Y_%m_%d_%H_%M_%S"))
-        FLAGS.output_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", FLAGS.model + timestamp))
+        FLAGS.model_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", FLAGS.model + timestamp))
 
-    if not os.path.exists(FLAGS.output_dir):
-        os.makedirs(FLAGS.output_dir)
+    if not os.path.exists(FLAGS.model_dir):
+        os.makedirs(FLAGS.model_dir)
 
     x_train, y_train, word_dict, reversed_dict,  x_valid, y_valid = preprocess()
     train(x_train, y_train, word_dict, reversed_dict, x_valid, y_valid)

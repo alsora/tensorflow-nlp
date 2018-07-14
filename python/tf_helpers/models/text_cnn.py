@@ -28,28 +28,36 @@ class TextCNN(BaseModel):
         super(TextCNN, self).__init__(FLAGS)
 
         # Placeholders for input, output and dropout
+        self.sequence_length = tf.constant(sequence_length, dtype=tf.int32, shape=[], name="sequence_length")
         self.input_x = tf.placeholder(tf.int32, [None, sequence_length], name="input_x")
         self.input_y = tf.placeholder(tf.int32, [None, num_classes], name="input_y")
         self.num_classes = num_classes
-        self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
+        self.dropout_keep_prob = tf.placeholder_with_default(1.0, [], name="dropout_keep_prob")
         self.learning_rate = FLAGS.learning_rate
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
 
+        self.dataset = get_dataset(self.input_x, self.input_y, FLAGS)
+
+        self.iterator = tf.data.Iterator.from_structure(self.dataset.output_types, self.dataset.output_shapes)
+        
+        self.dataset_init_op = self.iterator.make_initializer(self.dataset, name='dataset_init')
+
+        self.x, self.y = self.iterator.get_next()
 
         # Keeping track of l2 regularization loss (optional)
         l2_loss = tf.constant(0.0)
 
         # Embedding layer
-        with tf.device('/cpu:0'), tf.name_scope("embedding"):
+        with tf.device('/cpu:0'), tf.variable_scope("embedding"):
             vocab_size = len(reversed_dict)
             self.W = tf.Variable(tf.random_uniform([vocab_size, FLAGS.embedding_dim], -1.0, 1.0), name="W")
-            self.embedded_chars = tf.nn.embedding_lookup(self.W, self.input_x)
+            self.embedded_chars = tf.nn.embedding_lookup(self.W, self.x)
             self.data_embedding = tf.expand_dims(self.embedded_chars, -1)
 
         # Create a convolution + maxpool layer for each filter size
         pooled_outputs = []
         for i, filter_size in enumerate(FLAGS.filter_sizes):
-            with tf.name_scope("conv-maxpool-%s" % filter_size):
+            with tf.variable_scope("conv-maxpool-%s" % filter_size):
                 # Convolution Layer
                 filter_shape = [filter_size, FLAGS.embedding_dim, 1, FLAGS.num_filters]
                 W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name="W")
@@ -77,11 +85,11 @@ class TextCNN(BaseModel):
         self.h_pool_flat = tf.reshape(self.h_pool, [-1, num_filters_total])
 
         # Add dropout
-        with tf.name_scope("dropout"):
+        with tf.variable_scope("dropout"):
             self.h_drop = tf.nn.dropout(self.h_pool_flat, self.dropout_keep_prob)
 
         # Final (unnormalized) scores and predictions
-        with tf.name_scope("output"):
+        with tf.variable_scope("output"):
             W = tf.get_variable(
                 "W",
                 shape=[num_filters_total, self.num_classes],
@@ -93,19 +101,19 @@ class TextCNN(BaseModel):
             self.predictions = tf.argmax(self.logits, 1,output_type=tf.int32, name="predictions")
 
         # Calculate mean cross-entropy loss
-        with tf.name_scope("loss"):
-            losses = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logits, labels=self.input_y)
-            self.loss = tf.reduce_mean(losses) + FLAGS.l2_reg_lambda * l2_loss
+        with tf.variable_scope("loss"):
+            losses = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logits, labels=self.y)
+            self.loss = tf.add(tf.reduce_mean(losses), self.hyperparams["l2_reg_lambda"] * l2_loss, name="loss")
 
             opt = tf.train.AdamOptimizer(self.learning_rate)
             self.grads_and_vars = opt.compute_gradients(self.loss)
-            self.optimizer = opt.apply_gradients(self.grads_and_vars, global_step=self.global_step)
+            self.optimizer = opt.apply_gradients(self.grads_and_vars, global_step=self.global_step, name="optimizer")
 
 
         # Accuracy
-        with tf.name_scope("accuracy"):
+        with tf.variable_scope("accuracy"):
             # Convert 1 hot input into a dense vector
-            dense_y = tf.argmax(self.input_y, 1, output_type=tf.int32)
+            dense_y = tf.argmax(self.y, 1, output_type=tf.int32)
 
             # Compute accuracy
             correct_predictions = tf.equal(self.predictions, dense_y)
@@ -114,6 +122,6 @@ class TextCNN(BaseModel):
             # Compute a per-batch confusion matrix
             batch_confusion = tf.confusion_matrix(labels=dense_y, predictions=self.predictions, num_classes=self.num_classes)
             # Create an accumulator variable to hold the counts
-            self.confusion = tf.Variable( tf.zeros([self.num_classes,self.num_classes], dtype=tf.int32 ), name='confusion' )
+            self.confusion = tf.get_variable('confusion', shape=[self.num_classes,self.num_classes], dtype=tf.int32, initializer=tf.zeros_initializer())
             # Create the update op for doing a "+=" accumulation on the batch
-            self.confusion_update = self.confusion.assign( self.confusion + batch_confusion )
+            self.confusion_update = tf.assign( self.confusion, self.confusion + batch_confusion, name='confusion_update')

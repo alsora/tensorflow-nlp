@@ -35,7 +35,7 @@ class Seq2Seq(object):
         with tf.variable_scope("decoder/projection"):
             self.projection_layer = tf.layers.Dense(self.vocabulary_size, use_bias=False)
 
-        with tf.name_scope("embedding"):
+        with tf.variable_scope("embedding"):
             if not forward_only and FLAGS.glove_embedding:
                 init_embeddings = tf.constant(layer_utils.get_glove_embedding(reversed_dict, FLAGS.glove_embedding),dtype=tf.float32)
                 self.embeddings = tf.get_variable("embeddings", initializer=init_embeddings, trainable=False)
@@ -47,7 +47,7 @@ class Seq2Seq(object):
             self.decoder_emb_inp = tf.transpose(tf.nn.embedding_lookup(self.embeddings, self.decoder_input), perm=[1, 0, 2])
 
 
-        with tf.name_scope("encoder"):
+        with tf.variable_scope("encoder"):
             fw_cells = [tf.nn.rnn_cell.LSTMCell(self.num_hidden) for _ in range(self.num_layers)]
             bw_cells = [tf.nn.rnn_cell.LSTMCell(self.num_hidden) for _ in range(self.num_layers)]
             fw_cells = [rnn.DropoutWrapper(cell) for cell in fw_cells]
@@ -62,7 +62,7 @@ class Seq2Seq(object):
 
             self.encoder_state = rnn.LSTMStateTuple(c=encoder_state_c, h=encoder_state_h)
 
-        with tf.name_scope("decoder"), tf.variable_scope("decoder") as decoder_scope:
+        with tf.variable_scope("decoder") as decoder_scope:
             decoder_cell = tf.nn.rnn_cell.LSTMCell(self.num_hidden * 2)
 
             if not forward_only:
@@ -101,7 +101,7 @@ class Seq2Seq(object):
                 )
 
 
-        with tf.name_scope("output"):
+        with tf.variable_scope("output"):
             if not forward_only:
                 self.logits = tf.transpose(
                     self.projection_layer(self.decoder_output), perm=[1, 0, 2])
@@ -115,7 +115,7 @@ class Seq2Seq(object):
                 self.prediction = tf.transpose(outputs.predicted_ids, perm=[1, 2, 0])
 
 
-        with tf.name_scope("loss"):
+        with tf.variable_scope("loss"):
             if not forward_only:
                 crossent = tf.nn.sparse_softmax_cross_entropy_with_logits(
                     logits=self.logits_reshape, labels=self.input_y)
