@@ -75,7 +75,7 @@ def interactive(model):
         model: instance of network model
     """
     model.logger.info(
-    "This is an interactive mode.\nTo exit, enter 'exit'.\nYou can enter a text like\ninput> I love Paris")
+    "This is an interactive mode.\nTo exit, enter 'exit'.\nYou can enter a text like\ninput> I love Los Angeles")
 
     words_dict_path = os.path.join(FLAGS.model_dir, "vocab_words")
     labels_dict_path = os.path.join(FLAGS.model_dir, "vocab_labels")
